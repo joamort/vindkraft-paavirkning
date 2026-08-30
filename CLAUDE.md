@@ -13,7 +13,14 @@ Status: **fase 0–3 ferdig** (MVP + støymodell + høgdeprofil-graf + visuell d
 **fase 4a ferdig** (eigar, hinderlys/nattmodus, skyggekast, estimert turbinutplassering,
 stadfesting før analyse, brukarjustering av estimerte turbinposisjonar),
 **3D-panorama med flyfoto og nærfelt-fortetta terrengmesh** (§16–18),
-**DOM-kryssjekk mot skog og bygningar** (§22).
+**DOM-kryssjekk mot skog og bygningar** (§22–24),
+**sjølvhosting på GitHub** — FrankenPHP-binærar + Docker, release-on-tag (§25),
+og **v0.2.0-funksjonane**: adressesøk (§26), kumulativ horisontbelastning (§27),
+éin-sides PDF-rapport (§28), lokalt synlegheitskart / ZVI (§29), fotomontasje (§30),
+diskré versjonssjekk + «oppdater turbindata»-knapp (§31).
+
+Utgjevne versjonar: `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml`
+byggjer pakkane. Siste: **v0.2.0**. Repoet er offentleg.
 
 ## Teknisk stack
 
@@ -53,14 +60,25 @@ js/
                         Leverer brukbare delresultat undervegs (§21)
     NaerTerreng.js    – Asimutal fortetting (216 retningar) av meshen i nærfeltet
     SatelliteTexture.js – Esri-flyfoto som teksturringar til panoramaet
+    Zvi.js            – Lokalt synlegheitskart: rutenett rundt punktet, farga
+                        etter synlege turbinar per rute (§29 — tilnærming)
+    KmlExport.js      – KML for analyserte / alle turbinar
     ErrorReporter.js  – Fangar klientfeil og POSTar til den delte feilloggen
     dom.js            – escHtml(), formatering, debounce (med .avbryt())
+  ui/
+    Fotomontasje.js   – Turbin-omriss oppå brukarens eige foto, manuell
+                        kamera-innstilling (§30)
 backend/
   api/
     turbines.php          – Cacha turbindata, valfritt radius-/statusfiltrert
     elevation_point.php   – Terrenghøgd i eitt punkt
     elevation_profile.php – Terrengprofilar (batch), proxy mot Kartverket WPS
-    surface_points.php    – Overflatehøgd (dom1) i inntil 100 punkt, kvitlista kjelde (§22)
+    surface_points.php    – Overflatehøgd (dom1/dtm1) i inntil 100 punkt, kvitlista
+                            kjelde (§22; dtm1-varianten matar synlegheitskartet §29)
+    adressesok.php        – Proxy mot Kartverket adresse-API (§26)
+    version_check.php     – «Finst det ei nyare utgåve?» mot GitHub (§31)
+    refresh_turbines.php  – Byggjer turbin-cachen på nytt frå NVE (§31)
+    log_error.php         – Tek imot klientfeil → delt error.log (§15)
   data/
     turbine_specs_known.json – KURATERT: turbinmål lesne ut av søknadsdokument.
                                Handskriven, versjonskontrollert, aldri regenerert.
@@ -73,9 +91,19 @@ backend/
     TurbineLayout.php       – Estimert turbinutplassering i NVE sitt planområde
     RateLimiter.php         – Filbasert rate limiting per IP
     Http.php                – cURL med stream-fallback
+    Logger.php              – Filbasert delt feillogg (server + klient, §15)
 cron/fetch_turbines.php – Cron-inngang (dagleg)
-cache/                  – turbines.json, areas.json, layouts.json, elevation/ (gitignored)
+cache/                  – turbines.json, areas.json, layouts.json, elevation/,
+                          version_check.json, refresh.lock (alle gitignored)
 tools/verify_model.mjs  – Lokal testsuite som køyrer den EKTE frontend-koden
+Caddyfile               – FrankenPHP-konfig for dei nedlastbare utgåvene + Docker;
+                          speglar tryggingsheader/CSP/tilgangskontroll frå .htaccess (§25)
+Dockerfile, docker-compose.yml – «docker compose up» → localhost:8011 (§25)
+scripts/dev.sh          – php -S-utviklingsserver (§25)
+scripts/dist/           – php.ini, start.sh/start.bat, LES-MEG — går inn i release-pakkane
+.github/workflows/      – ci.yml (php -l + node --check + docker-røyktest),
+                          release.yml (FrankenPHP-binærar + app, på tag v*) (§25)
+version.json            – utgåvestempel; finst BERRE i nedlastbare utgåver (§31)
 ```
 
 ## Dei viktige avgjerdene
@@ -1197,7 +1225,141 @@ vere gammal, og kor mange av klumpane som står under 300 m unna.
 Verifisert i nettlesar på Odal: **9 av 21 synlege med brytaren av, 4 av 21 med
 han på** — fem turbinar forsvinn, og dei grøne klumpane står att der dei stod.
 
+### 25. Sjølvhosting: FrankenPHP for BÅDE Docker og nedlastbare utgåver
+
+`.htaccess` er Apache-berre, og både `php -S` og FrankenPHP ignorerer han. CSP-en
+(som heile personvern-garantien kviler på) og tilgangskontrollen der er difor
+reproduserte i **`Caddyfile`**, som er konfigurasjonen for begge dei distribuerte
+formene. Held du `.htaccess` og `Caddyfile` i synk (og bumpar `CONFIG-VERSION` i
+`.htaccess`), oppfører alle tre køyremåtane seg likt. `littavalt.no` køyrer
+framleis på `.htaccess`.
+
+Tre feil som kvar kosta ein release-iterasjon (v0.1.0 → v0.1.5):
+
+- **Site-adressa i Caddyfile må vere PORT-BERRE** (`:{$VIND_PORT}`) med eit eige
+  `bind`-direktiv. Ei IP i adressa (`http://0.0.0.0:8011`) gjer `0.0.0.0` til ein
+  **Host-matchar**, så requests mot `localhost` fell utanfor blokka og HEILE
+  konfigen (CSP + tilgangskontroll) vert forbigått. Standard `bind` er loopback;
+  Docker set `VIND_BIND=0.0.0.0`.
+- **FrankenPHP for Windows er IKKJE éin binær** — `frankenphp-windows-x86_64.zip`
+  har `frankenphp.exe` + ~20 køyretids-DLL-ar. `curl`, `mbstring`, `dom`,
+  `simplexml` er kompilerte inn; `ext/ dev/ lib/ extras/` trengst ikkje.
+  Linux/macOS ER statiske enkeltbinærar.
+- **Bundla FrankenPHP er PHP 8.5** med `display_errors = On`. PHP 8.5 gir eit
+  compile-time deprecation-varsel for `$http_response_header` (brukt i `Http.php`),
+  som vart skrive som HTML rett inn i JSON-svara og øydela `JSON.parse`.
+  `scripts/dist/php.ini` (`display_errors=Off`, `expose_php=Off`,
+  `error_reporting` utan `E_DEPRECATED`) vert lasta via `PHPRC` i alle tre
+  startarane. littavalt.no var uråka fordi den php.ini alt har `display_errors=Off`.
+
+**Release-pakkane har turbin-cachen ferdigbygd.** `release.yml` har ein
+`turbincache`-jobb (setup-php + `cron/fetch_turbines.php`) som byggjer éin gong og
+deler `turbines/areas/meta/layouts.json` til pakke-jobbane via artifact — fyrste
+start er då umiddelbar, utan NVE-henting og utan tomt-kart-kappløp.
+`start.sh`/`start.bat` opnar nettlesaren FYRST når `localhost:8011` faktisk svarar.
+Den kalde NVE-hentinga i `start.sh` er no berre eit fallback (fila sletta).
+
+**Bruksteljing = GitHub-nedlastingstal.** Ingen phone-home. Les med
+`gh release view <tag> --json assets -q '.assets[]|"\(.name): \(.download_count)"'`.
+
+### 26. Adressesøk: proxy held connect-src 'self'
+
+`backend/api/adressesok.php` proxyar `ws.geonorge.no/adresser/v1/sok` (fuzzy).
+Nettlesaren snakkar aldri direkte med Kartverket — same prinsipp som
+terrengoppslaga — så CSP-en er urørt. Søkjestrengen går til Kartverket for
+geokoding (som koordinatane alt gjer for høgdedata), og vert ikkje lagra/logga.
+Eigen rate-limit-teljar (`adr:ip:`, jf. §20). **Berre `strlen`/`substr`, ikkje
+`mb_*`** (Fallgruver). Vel eit treff → same veg inn som ei `?lat=&lon=`-lenke:
+kartet panorerer og analysen startar.
+
+### 27. Kumulativ horisontbelastning: UNION, ikkje sum
+
+`kumulativHorisont()` i `ImpactCalculator.js` gir «turbinane fyller X° av
+synsranda mot \<retning\> · N anlegg». Kvar synleg turbin opptek eit
+kompass-intervall `kurs ± synsvinkel/2`; talet er **unionen** av desse (sirkulær
+intervall-samanslåing med nord-krysshandtering), ikkje summen — to turbinar som
+overlappar i synsranda skal telje éin gong. SNH sin rettleiar om visuell
+framstilling vektlegg både horisontalvinkelen og talet separate utbyggingar.
+`verify_model.mjs` §4b låser union≠sum, nord-kryss og 360°-taket.
+
+### 28. PDF-rapport: `@media print`, ikkje eit bibliotek
+
+Knappen «Rapport (PDF)» fyller `<div id="utskrift">` og kallar `window.print()`.
+`@media screen { #utskrift { display:none } }` og
+`@media print { body > *:not(#utskrift) { display:none } }` — ingen jsPDF, ingen
+canvas-triks, brukaren vel «Lagre som PDF» i utskriftsdialogen. Rapporten har
+nøkkeltala, tabell per anlegg, full ansvarsfråskriving og ei
+`?lat=&lon=&r=`-gjenskapingslenke. `sisteAdresse` (frå adressesøket) vert
+nullstilt i `settPunkt` for alle andre vegar inn, så tittelen aldri viser feil
+adresse.
+
+### 29. Lokalt synlegheitskart (ZVI): ei TILNÆRMING, og merkt som det
+
+`js/utils/Zvi.js` fargelegg eit 13×13-rutenett (~480 m) rundt punktet etter kor
+mange turbinar som er synlege frå kvar rute — svaret på «er heile eigedomen råka,
+eller berre der eg klikka» (§7b).
+
+Ei eksakt utrekning ville kravd ein ny terrengprofil frå kvar rute til kvar
+turbin (hundrevis av kall). I staden GJENBRUKAST analysen for punktet:
+`skannHorisont()` gir per turbin ei skrålinje-helning og det kritiske punktet
+`{d, z}`. Flyttar auget Δz (rutas bakkehøgd minus punktets), endrar helninga til
+det kritiske punktet seg med `−Δz/d_krit`, så:
+
+    horisontMoh_rute = horisontMoh_punkt + Δz · (1 − D / d_krit)
+
+`D/d_krit` er typisk ≫ 1 (turbin langt unna, skjering nær) → å heve auget litt
+SENKER horisonten mykje (same D/d-forsterking som §7). **Føresetnaden — same
+kritiske punkt for ruta som for punktet — held berre nær punktet**, difor det
+vesle rutenettet. Same substitusjonsfamilie som DOM-sjekken (§22) og
+hinderlys-testen (§10): `horisontMoh` er ein eigenskap ved terrenget MELLOM, ikkje
+ved den nøyaktige augeposisjonen.
+
+Bakkehøgda til cellene: `dtm1` via `surface_points.php` (`datakilde`-kvitlista har
+`dtm1` òg), chunka til ≤100 per kall → 2 kall for 169 celler, cacha permanent.
+Celler utan laserdekning vert `null`, aldri 0. Uskjerma turbinar (ingen kritisk
+punkt) er upåverka. `verify_model.mjs` §4c låser: flatt rutenett = uendra, ei
+heva celle senkar horisonten nok til å avdekke ein så vidt skjult turbin,
+null-celle, uskjerma turbin.
+
+### 30. Fotomontasje: MANUELT kamera med vilje
+
+`js/ui/Fotomontasje.js` legg turbin-omriss oppå eit foto brukaren lastar opp.
+Til skilnad frå 3D-panoramaet (som utleier kameraretninga frå terrenget) MÅ
+brukaren her stille inn sikt-retning, synsfelt og horisont sjølv. Grunnen:
+utan EXIF-kompass og kjend brennvidde kan ein ikkje plassere turbinane
+automatisk, og ei gjetting ville sett dei feil — verre enn ingen funksjon.
+Atterhaldet står tydeleg i UI-et, og omrissa er med vilje ikkje fotorealistiske
+(me kjenner geometrien, ikkje utsjånaden).
+
+2D-canvas, enkel rett-linjes projeksjon (held for synsfelt ≤ ~90°), men **same
+fysikk som resten** — augehøgd, `horisontfall` (krumming/refraksjon), og klipping
+mot `synlegheit.horisontMoh` frå analysen (§16). **Fotoet vert aldri lasta opp**:
+`blob:` i `img-src`, alt skjer i nettlesaren, «Last ned» komponerer canvas → PNG.
+
+### 31. Versjonssjekk og «oppdater turbindata» — berre i nedlastbare utgåver
+
+`backend/api/version_check.php` spør `api.github.com/.../releases/latest`
+**server-side** (så CSP held `connect-src 'self'`), cachar svaret 24 t
+(`cache/version_check.json`), samanliknar `vX.Y.Z` numerisk, og **feilar heilt
+stille**. Aktiv BERRE når `version.json` finst i approt — som han berre gjer i
+release-pakkane (`release.yml` stemplar `github.ref_name`). Web/kjeldekode gjer
+aldri GitHub-kallet. Kill-switch: slett `version.json`.
+
+`backend/api/refresh_turbines.php` byggjer turbin-cachen på nytt frå NVE (POST,
+`flock` mot samtidige kall). **403 når `CRON_SECRET` er sett** (delt/offentleg
+host) — der går manuell oppdatering framleis via `cron/fetch_turbines.php?key=`.
+Frontend viser «Oppdater no»-knapp når snapshotet er eldre enn
+`CONFIG.sjolvhost.turbindataGamleDagar` (45), og utgåve-id ved overskrifta.
+
+**Asynkrone knappar sperrar seg sjølv medan dei køyrer** — eit flagg, `disabled`
++ spinnar på utløysaren, valfri statustekst. Etablert på `visPanorama()`
+(`panoramaKoyrer`), `kjoerOverflatesjekk()` (`overflateKoyrer`),
+`vekslSynlegheitskart()` (`_zviKoyrer`), `brukMinPosisjon()` (`posisjonHentar`)
+og oppdater-knappen. `.knapp:disabled` og `:focus-visible` har eigne stilar.
+
 ## Køyre lokalt
+
+For utvikling (Linux/macOS, treng PHP 8) — `./scripts/dev.sh` gjer 1+2 under:
 
 ```bash
 # 1. Bygg turbin-cachen (~7 s, hentar 11 ArcGIS-lag)
@@ -1212,6 +1374,17 @@ node tools/verify_model.mjs
 
 # ...eller mot ein annan port om 8011 er oppteken:
 VIND_API=http://localhost:8012 node tools/verify_model.mjs
+```
+
+For å teste dei distribuerte formene: `docker compose up`, eller last ned ei
+release-pakke. Begge køyrer FrankenPHP mot `Caddyfile` (§25). Browser-smoketesting
+med FrankenPHP-binæren:
+
+```bash
+curl -fsSL -o /tmp/frankenphp \
+  https://github.com/php/frankenphp/releases/latest/download/frankenphp-linux-x86_64
+chmod +x /tmp/frankenphp
+PHPRC="$PWD/scripts/dist/php.ini" VIND_PORT=8011 /tmp/frankenphp run --config Caddyfile
 ```
 
 `tools/verify_model.mjs` importerer dei **ekte** frontend-modulane og køyrer dei mot
@@ -1278,32 +1451,49 @@ nettlesaren, ikkje ein kopi. Node er berre eit dev-verktøy her.
   tolt det; det er berre det resampla nærfeltet (§18) som krev eksakt like
   radiar. Ein test som krev `p.d === radier[j]` på rå horisontdata feilar med
   rette.
+- **`Caddyfile`: IP i site-adressa gjer heile konfigen død.** `http://0.0.0.0:8011`
+  som blokk-etikett vert ein Host-matchar; requests mot `localhost` fell utanfor
+  og CSP/tilgangskontroll vert forbigått. Bruk port-berre (`:{$VIND_PORT}`) +
+  eige `bind`. Sjå §25.
+- **FrankenPHP-binæren er PHP 8.5 med `display_errors=On`.** Utan
+  `scripts/dist/php.ini` (via `PHPRC`) lek `$http_response_header`-deprecation
+  som HTML inn i JSON-svara og øydelegg `JSON.parse`. Testar du eit endepunkt
+  under FrankenPHP: sett `PHPRC="$PWD/scripts/dist/php.ini"`.
+- **Nokre sandkasser når ikkje `nve.geodataonline.no` (DNS-blokkert).** Då
+  feilar `cron/fetch_turbines.php` og `refresh_turbines.php`, men Kartverket
+  (`ws.geonorge.no`, `wps.geonorge.no`) går fint — bruk ein eksisterande
+  `cache/turbines.json` og test alt som ikkje er sjølve turbin-hentinga.
+- **`.htaccess` blokkerer no HEILE `cache/` bortsett frå `turbines.json` og
+  `areas.json`** (CONFIG-VERSION 3). `Caddyfile` har same regel. Legg du ei ny
+  fil i `cache/` som frontend må lese, må begge oppdaterast.
 
 ## TODO / neste fasar
 
-- **Fase 4 (resten):** adressesøk (Kartverket adresse-API), PWA/offline for
-  turbinlaget, skjermbilete-eksport. Delbar lenke er alt på plass (`?lat=&lon=&r=`).
+- **Fase 4 (resten):** PWA/offline for turbinlaget, rå skjermbilete-eksport av
+  kartet (PDF-rapporten §28 og delbar lenke `?lat=&lon=&r=` er på plass).
+- **2-punkts-kalibrering for fotomontasjen (§30):** kan brukaren peike ut to
+  turbinar han kjenner att i fotoet, kan (sikt-retning, grader-per-piksel)
+  løysast eksakt i staden for å stillast med slidere.
+- **Synlegheitskartet (§29) er lokalt og ei tilnærming.** Eit større / meir
+  nøyaktig ZVI måtte hente terrengprofilar per celle — vurder ein billeg
+  variant som deler dei lange horisontstrålane frå panoramaet.
 - Skyggekast: vurder eit *faktisk*-estimat med skydekkestatistikk (met.no
   frost-API har soltimar per stasjon) og vindrose. Modellen reknar berre det
   teoretiske i dag, og NVE si 8-timarsgrense kan difor ikkje målast mot.
+- **Vindretnings-avhengig støy:** medvind gir merkbart høgare Lp. Ei vindrose
+  (met.no / NVE) + medvind/motvind-verdi ville gjere dB-talet mindre abstrakt.
+  Same vindrose kunne gi ulik langs/tvers-avstand i utplasseringsheuristikken.
+- **Støykonturar på kartet:** L_den 45/40 dB-ringane rundt anlegget (alt
+  kalibrerte i §9) burde teiknast, ikkje berre stå som eitt tal.
 - Hinderlys: om Luftfartstilsynet nokon gong publiserer kva anlegg som har fått
   ADLS eller perimetermerking godkjent, kan §10 sitt maksimumsatterhald byttast
   med faktiske data. Per i dag finst ingen slik kjelde.
-- **DOM-sjekken (§22) ser eitt punkt per turbin, og det er ei nedre grense.**
-  Den billegaste utvidinga er **topp-K i staden for topp-1**: rekn
-  `terrengHelning(d, z + 20, augeMoh)` for kvart profilpunkt (altså «kva ville
-  vore kritisk om det stod 20 m skog her») og slå opp dei 3–5 høgaste. Med 50
-  punkt per kall kostar K = 3 for 40 turbinar framleis berre 3 kall.
-  Substitusjonen er like eksakt: den nye helninga er maks over dei punkta som
-  faktisk vart heva, og resten ligg framleis under. Det ville flytta svaret frå
-  «me fann eit hinder» mot «me leitte der hinder kunne stå».
 - DOM-sjekken har ingen aldersinformasjon om laserdataen. `hoydedata/v1` har eit
   `/datakilder/{kilde}`-endepunkt med metadata; finst det skanningsår per
   område der, kan atterhaldet «kan vere fleire år gammal» byttast med ei årstal.
-- Panoramaet klipper framleis på DTM-horisonten (§16), og seier berre i HUD-en
-  kor mange turbinar DOM-sjekken har funne skjulte. Ei DOM-klipping ville
-  trenge ein synleg av/på-brytar — elles ville brukaren ikkje forstå kvifor 3D
-  og sidepanel viser ulikt.
+- **DOM-klipping i panoramaet:** panoramaets skogbrytar (§24) klipper alt mot
+  DOM-horisonten. Same idé kunne gjelde synlegheitskartet (§29) — eit «med
+  skog»-lag.
 - Utplassering: heuristikken har ingen vinddata. Ei vindrose (NVE sitt
   vindressurskart) ville late oss bruke ulik avstand på langs og på tvers av
   hovudvindretninga, slik verkelege parkar gjer.
