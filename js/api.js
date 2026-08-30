@@ -115,3 +115,29 @@ export async function hentProfilar(origo, mal, signal) {
     });
     return lesJson(respons, 'Høgdeprofil');
 }
+
+/**
+ * Diskré versjonssjekk for den sjølvhosta appen. Backenden spør GitHub (maks
+ * éin gong per døgn) og svarar `{naavaerande, siste, nyare, url}`. Feilar det,
+ * eller er dette ein web-/kjeldekode-installasjon, får kallaren null og skal
+ * ikkje vise noko.
+ */
+export async function sjekkVersjon() {
+    try {
+        const respons = await fetch(CONFIG.api.versjonssjekk);
+        if (!respons.ok) return null;
+        return await respons.json();
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Bygg turbin-cachen på nytt frå NVE (den sjølvhosta appen sin «Oppdater
+ * no»-knapp). Tek 20–40 s. Kastar ApiFeil om endepunktet er avslege eller
+ * hentinga feilar.
+ */
+export async function oppdaterTurbindata() {
+    const respons = await fetch(CONFIG.api.oppdaterTurbindata, { method: 'POST' });
+    return lesJson(respons, 'Oppdatering av turbindata');
+}

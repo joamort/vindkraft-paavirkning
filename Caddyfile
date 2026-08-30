@@ -47,14 +47,21 @@
 
 	# ---------------------------------------------------- Tilgangskontroll
 	# Speglar <FilesMatch> / RewriteRule i .htaccess.
-	@sensitiv_filtype path_regexp \.(bak|config|dist|ini|log|md|sh|sql|sw[op]|ffs_db|mjs)$
+	@sensitiv_filtype path_regexp \.(bak|config|dist|ini|lock|log|md|sh|sql|sw[op]|ffs_db|mjs)$
 	@punktfil path_regexp /\.[^/]
-	@internt path /cache/elevation/* /cache/ratelimit/* /cache/layouts.json /cache/meta.json /logs/* /tools/*
+	@internt path /logs/* /tools/*
+	# Alt under cache/ er internt PHP-arbeidsminne bortsett frå dei to filene
+	# frontend hentar direkte.
+	@internt_cache {
+		path /cache/*
+		not path /cache/turbines.json /cache/areas.json
+	}
 
 	route {
 		respond @sensitiv_filtype 403
 		respond @punktfil 403
 		respond @internt 403
+		respond @internt_cache 403
 		php_server
 	}
 }

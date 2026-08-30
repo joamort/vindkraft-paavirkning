@@ -120,6 +120,11 @@ jobs:
           # (elevation/-cachen er punktspesifikk og vert IKKJE pakka med.)
           cp cache/turbines.json cache/areas.json cache/meta.json cache/layouts.json "$dir/cache/"
 
+          # Utgåvestempel — version_check.php samanliknar dette mot GitHub.
+          # Finst berre i nedlastbare utgåver; utan fila er versjonssjekken av.
+          printf '{"versjon":"%s","bygd":"%s"}\n' \
+            "${{ github.ref_name }}" "$(date -u +%Y-%m-%d)" > "$dir/version.json"
+
           # --- Startarar ---
           cp scripts/dist/LES-MEG.txt "$dir/"
           if [ "${{ matrix.archive }}" = "zip" ]; then

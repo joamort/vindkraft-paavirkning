@@ -35,6 +35,11 @@ Awesome, Three.js) frå offentlege CDN-ar, og kartbakgrunn/flyfoto frå
 Kartverket og Esri. Dette krev internett, men går direkte frå nettlesaren
 din utan mellomledd.
 
+Éin bevisst sjekk: appen spør GitHub om det finst ei nyare utgåve (maks
+éin gong per døgn, via den lokale backenden, feilar stille). Ingenting
+identifiserande vert sendt. Vil du ikkje ha sjekken: slett fila
+version.json.
+
 
 KVA LIGG I MAPPA
 ----------------
@@ -56,9 +61,10 @@ Dei fleste Windows 10/11-maskiner har han alt.
 OPPDATERE TURBINDATA
 --------------------
 
-Turbindata i pakka er ein snapshot frå då utgåva vart laga. For å hente
-ferske data: slett cache/turbines.json og start på nytt (krev internett,
-kan ta opptil eit par minutt).
+Turbindata i pakka er ein snapshot frå då utgåva vart laga. Er han meir enn
+45 dagar gamal, viser appen ei stripe med ein «Oppdater no»-knapp. Du kan
+òg tvinge ei oppdatering ved å slette cache/turbines.json og starte på nytt
+(krev internett, kan ta opptil eit par minutt).
 
 
 Lisens: MIT. Kjeldekode: https://github.com/joamort/vindkraft-paavirkning

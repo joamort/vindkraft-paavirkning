@@ -767,5 +767,17 @@ export const CONFIG = {
         hoydeprofil: 'backend/api/elevation_profile.php',
         hoydepunkt: 'backend/api/elevation_point.php',
         overflatepunkt: 'backend/api/surface_points.php',
+        versjonssjekk: 'backend/api/version_check.php',
+        oppdaterTurbindata: 'backend/api/refresh_turbines.php',
+    },
+
+    /**
+     * Varsel i den sjølvhosta appen (nedlastbar utgåve). Ingen effekt på
+     * web-versjonen: version_check.php svarar «ingen nyare versjon» utan ei
+     * `version.json`, og refresh-endepunktet er avslege når CRON_SECRET er sett.
+     */
+    sjolvhost: {
+        /** Vis «turbindata er gamle»-varsel når snapshotet er eldre enn dette. */
+        turbindataGamleDagar: 45,
     },
 };

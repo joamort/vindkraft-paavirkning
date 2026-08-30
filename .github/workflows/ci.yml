@@ -74,6 +74,15 @@ jobs:
           check 403 /logs/error.log
           check 403 /cache/elevation/.gitkeep
           check 403 /cache/layouts.json
+          check 405 /backend/api/refresh_turbines.php
+
+          # version_check.php: utan version.json (som i biletet) skal han svare
+          # reint JSON med naavaerande:null, utan å kontakte GitHub.
+          vc=$(curl -s http://localhost:8011/backend/api/version_check.php)
+          case "$vc" in
+            *'"ok":true'*'"naavaerande":null'*) echo "version_check: ok ✓" ;;
+            *) echo "::error::version_check uventa svar: ${vc:0:160}"; fail=1 ;;
+          esac
 
           # PHP-svar må vere reint JSON — ingen deprecation/warning-HTML framfor
           # (display_errors må vere Off i den medfølgjande php.ini).

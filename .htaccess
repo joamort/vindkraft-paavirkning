@@ -1,4 +1,4 @@
-# CONFIG-VERSION: 2 (2026-08-24)
+# CONFIG-VERSION: 3 (2026-08-30)
 # Bump talet over ved kvar endring, slik at filinnhaldet garantert skil seg frå
 # det som alt ligg på server (same konvensjon som PolitiKartet).
 #
@@ -46,19 +46,19 @@
 </FilesMatch>
 
 # Blokker sensitive filtypar (dokumentasjon, logger, backup, konfig)
-<FilesMatch "(^#.*#|\.(bak|config|dist|ini|log|md|sh|sql|sw[op]|ffs_db|mjs)|~)$">
+<FilesMatch "(^#.*#|\.(bak|config|dist|ini|lock|log|md|sh|sql|sw[op]|ffs_db|mjs)|~)$">
     Require all denied
 </FilesMatch>
 
 # Ingen fillister
 Options -Indexes
 
-# Fil-cachen for høgdeprofilar er reint internt arbeidsminne for PHP —
-# ingen grunn til å eksponere titusenvis av småfiler over web.
+# Alt under cache/ er internt arbeidsminne for PHP (høgdeprofilar, rate
+# limiting, layout-estimat, versjonssjekk-cache, låsefiler) — bortsett frå
+# dei to filene frontend hentar direkte.
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^cache/elevation/ - [F,L]
-    RewriteRule ^cache/ratelimit/ - [F,L]
+    RewriteRule ^cache/(?!turbines\.json$|areas\.json$) - [F,L]
 </IfModule>
 
 # tools/ er lokale dev-verktøy (Node), skal aldri køyre eller lesast frå web.

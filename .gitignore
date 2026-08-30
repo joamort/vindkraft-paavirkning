@@ -28,3 +28,7 @@ logs/*.log.1
 
 # Byggeartefaktar frå release-workflowen.
 /dist/
+
+# Utgåvestempel — vert lagt inn i nedlastbare pakkar av release-workflowen,
+# skal ikkje liggje i kjeldekoden (då ville versjonssjekken slått til i dev).
+/version.json

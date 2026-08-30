@@ -33,6 +33,12 @@ serveren er klar. Turbindata følgjer med pakka (ein snapshot frå då utgåva
 vart laga), så oppstarten er rask. Webtenaren (FrankenPHP med PHP innebygd)
 ligg i pakka; ingenting vert installert på maskina.
 
+Appen viser ei diskré stripe når turbindata-snapshotet er meir enn 45 dagar
+gamalt (med ein «Oppdater no»-knapp som hentar friskt frå NVE), og når det
+finst ei nyare utgåve på GitHub. Versjonssjekken går via den lokale
+backenden, maks éin gong per døgn — slett `version.json` i pakka for å slå
+han heilt av.
+
 ### 2. Docker
 
 ```bash
@@ -70,7 +76,12 @@ og `php -S` er elles einstråds og deadlockar).
   Awesome, Three.js) frå offentlege CDN-ar (`unpkg.com`, `cdnjs.cloudflare.com`),
   og kartbakgrunn/flyfoto frå Kartverket og Esri. Dette krev internett, men går
   direkte frå nettlesaren din. `Content-Security-Policy` låser `connect-src`
-  til `'self'`, så ingen andre nettverkskall er moglege frå sida.
+  til `'self'`, så ingen andre nettverkskall er moglege frå sjølve sida.
+- Éin bevisst utgåande sjekk i den nedlastbare utgåva: backenden spør
+  `api.github.com` om siste release-tag (maks éin gong per døgn, cacha lokalt,
+  feilar stille). Det einaste som går ut er ein vanleg HTTPS-førespurnad — inga
+  identifiserande informasjon. Slett `version.json` for å slå han av. Web- og
+  kjeldekode-oppsett gjer aldri dette kallet.
 
 Serveren bind seg berre til `localhost` (Docker-varianten til containeren).
 Ikkje eksponer han mot internett — han har ingen autentisering.

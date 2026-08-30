@@ -9,7 +9,10 @@
 
 import { CONFIG } from './config.js';
 import { state } from './state.js';
-import { hentTurbinar, hentOmrader, hentHoyde, hentProfilar } from './api.js';
+import {
+    hentTurbinar, hentOmrader, hentHoyde, hentProfilar,
+    sjekkVersjon, oppdaterTurbindata,
+} from './api.js';
 import { MapManager } from './ui/MapManager.js';
 import { ImpactPanel } from './ui/ImpactPanel.js';
 import { Toast } from './ui/Toast.js';
@@ -127,9 +130,71 @@ class VindApp {
             }
 
             this._lesUrlPunkt();
+
+            // Sjølvhosta-varsel (gamle data / ny utgåve) — heilt uavhengig av
+            // resten, og fullstendig stille i web-versjonen.
+            this._sjekkSjolvhostVarsel(data.generert);
         } catch (e) {
             Toast.error(e.message);
             console.error(e);
+        }
+    }
+
+    /**
+     * Berre relevant for den nedlastbare utgåva. Viser ei diskré stripe over
+     * ansvarsfråskrivinga når (a) turbindata-snapshotet er gamalt, eller
+     * (b) det finst ei nyare utgåve på GitHub. Feilar noko av dette, vert
+     * stripa berre ståande tom.
+     */
+    async _sjekkSjolvhostVarsel(generert) {
+        const rader = [];
+
+        const alderDagar = (Date.now() - new Date(generert).getTime()) / 86_400_000;
+        if (Number.isFinite(alderDagar) && alderDagar > CONFIG.sjolvhost.turbindataGamleDagar) {
+            rader.push(
+                `<span><i class="fa-solid fa-database"></i> Turbindata er `
+                + `${Math.round(alderDagar)} dagar gamle.</span>`
+                + `<button type="button" class="varsel-knapp" data-action="oppdater-turbindata">`
+                + `Oppdater no</button>`,
+            );
+        }
+
+        try {
+            const v = await sjekkVersjon();
+            if (v?.nyare && v.siste) {
+                const url = escHtml(v.url || 'https://github.com/joamort/vindkraft-paavirkning/releases/latest');
+                rader.push(
+                    `<span><i class="fa-solid fa-rocket"></i> Ny utgåve `
+                    + `${escHtml(v.siste)} finst (du har ${escHtml(v.naavaerande)}).</span>`
+                    + `<a class="varsel-knapp" href="${url}" target="_blank" rel="noopener">`
+                    + `Sjå på GitHub</a>`,
+                );
+            }
+        } catch { /* fail-silent */ }
+
+        const stripe = $('varselstripe');
+        if (!stripe) return;
+        if (rader.length === 0) {
+            stripe.hidden = true;
+            stripe.innerHTML = '';
+            return;
+        }
+        stripe.innerHTML = rader.map((r) => `<div class="varsel-rad">${r}</div>`).join('');
+        stripe.hidden = false;
+    }
+
+    async _oppdaterTurbindataFraKnapp(knapp) {
+        const opphavleg = knapp.textContent;
+        knapp.disabled = true;
+        knapp.textContent = 'Hentar … (~½ min)';
+        try {
+            await oppdaterTurbindata();
+            Toast.success('Turbindata oppdatert. Lastar sida på nytt …');
+            setTimeout(() => location.reload(), 1200);
+        } catch (e) {
+            Toast.error(e.message);
+            knapp.disabled = false;
+            knapp.textContent = opphavleg;
         }
     }
 
@@ -213,6 +278,10 @@ class VindApp {
 
                 case 'veksle-info':
                     $('info-modal')?.classList.toggle('open');
+                    break;
+
+                case 'oppdater-turbindata':
+                    this._oppdaterTurbindataFraKnapp(el);
                     break;
 
                 default:
