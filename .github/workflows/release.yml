@@ -19,7 +19,33 @@ env:
   FRANKENPHP_VERSION: latest
 
 jobs:
+  # Byggjer turbin-cachen éin gong og deler han med alle pakke-jobbane, i
+  # staden for at kvar av dei fire hentar det same frå NVE.
+  turbincache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: curl, dom, simplexml, mbstring
+          coverage: none
+      - name: Bygg turbin-cache
+        run: |
+          php cron/fetch_turbines.php
+          ls -la cache/*.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: turbincache
+          path: |
+            cache/turbines.json
+            cache/areas.json
+            cache/meta.json
+            cache/layouts.json
+          retention-days: 1
+
   build:
+    needs: turbincache
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -45,17 +71,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: PHP (for cache-bygg)
-        uses: shivammathur/setup-php@v2
+      - name: Hent den ferdigbygde turbin-cachen
+        uses: actions/download-artifact@v4
         with:
-          php-version: "8.3"
-          extensions: curl, dom, simplexml, mbstring
-          coverage: none
-
-      - name: Bygg turbin-cache (så fyrste start er umiddelbar)
-        run: |
-          php cron/fetch_turbines.php
-          ls -la cache/*.json
+          name: turbincache
+          path: cache
 
       - name: Last ned FrankenPHP (${{ matrix.name }})
         run: |
