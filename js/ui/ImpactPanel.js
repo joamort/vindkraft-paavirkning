@@ -141,6 +141,9 @@ export class ImpactPanel {
                 case 'vis-panorama':
                     this.handlingar.paaVisPanorama?.();
                     break;
+                case 'fotomontasje':
+                    this.handlingar.paaFotomontasje?.();
+                    break;
                 case 'lukk-detalj':
                     this.handlingar.paaLukkDetalj?.();
                     break;
@@ -396,10 +399,11 @@ export class ImpactPanel {
                 ${this._overflateSamandragHtml(resultat, overflateKoyrer)}
                 ${this._hinderlysSamandragHtml(s)}
                 ${this._skyggekastSamandragHtml(s)}
-                <div style="margin-top: 1rem;">
+                <div class="visualknappar">
                     ${panoramaKoyrer
                         ? `<button type="button" class="knapp brei" data-action="vis-panorama" disabled><i class="fa-solid fa-spinner fa-spin"></i> Byggjer 3D-panorama …</button>`
                         : `<button type="button" class="knapp brei" data-action="vis-panorama"><i class="fa-solid fa-vr-cardboard"></i> Vis 3D-panorama</button>`}
+                    <button type="button" class="knapp brei" data-action="fotomontasje"><i class="fa-solid fa-image"></i> Fotomontasje</button>
                 </div>
                 ${naerskjermingVarsel}
                 ${avkortaVarsel}

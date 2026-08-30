@@ -14,6 +14,7 @@ import {
     sokAdresse, sjekkVersjon, oppdaterTurbindata,
 } from './api.js';
 import { byggSynlegheitskart } from './utils/Zvi.js';
+import { Fotomontasje } from './ui/Fotomontasje.js';
 import { MapManager } from './ui/MapManager.js';
 import { ImpactPanel } from './ui/ImpactPanel.js';
 import { Toast } from './ui/Toast.js';
@@ -54,9 +55,11 @@ class VindApp {
             paaVeljTurbin: (id) => this.veljTurbin(id),
             paaLukkDetalj: () => this.panel.lukkDetalj(),
             paaVisPanorama: () => this.visPanorama(),
+            paaFotomontasje: () => this.visFotomontasje(),
             paaTilbakestillPosisjon: (id) => this.tilbakestillTurbinPosisjon(id),
             paaSjekkOverflate: () => this.kjoerOverflatesjekk(),
         });
+        this.fotomontasje = new Fotomontasje();
 
         /**
          * Er DOM-kryssjekken undervegs? Styrer både spinnaren i samandraget
@@ -1169,6 +1172,14 @@ class VindApp {
      * fyller klientcachen, så neste opning er gratis. Det er BRUKEN av dei
      * som er vakta, med økt-id-en frå `opne()`.
      */
+    visFotomontasje() {
+        if (!state.punkt || state.resultat.length === 0) {
+            Toast.info('Analyser eit punkt først.');
+            return;
+        }
+        this.fotomontasje.opne({ punkt: state.punkt, resultat: state.resultat });
+    }
+
     async visPanorama() {
         const punkt = state.punkt;
         if (!punkt || this.panoramaKoyrer) return;
