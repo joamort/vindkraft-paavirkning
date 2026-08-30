@@ -75,5 +75,16 @@ jobs:
           check 403 /cache/elevation/.gitkeep
           check 403 /cache/layouts.json
 
+          # PHP-svar må vere reint JSON — ingen deprecation/warning-HTML framfor
+          # (display_errors må vere Off i den medfølgjande php.ini).
+          body=$(curl -s http://localhost:8011/backend/api/turbines.php)
+          case "$body" in
+            '{'*) echo "turbines.php: reint JSON ✓" ;;
+            *) echo "::error::turbines.php lek ikkje-JSON: ${body:0:120}"; fail=1 ;;
+          esac
+          if curl -si http://localhost:8011/ | grep -qi '^x-powered-by:'; then
+            echo "::error::X-Powered-By-header ikkje skjult (expose_php)"; fail=1
+          fi
+
           docker rm -f vind
           exit $fail

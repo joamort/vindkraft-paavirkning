@@ -8,6 +8,9 @@ set -e
 cd "$(dirname "$0")"
 BIN="./frankenphp"
 
+# Produksjons-PHP-innstillingar (elles lek deprecation-varsel inn i JSON-svara).
+export PHPRC="$PWD/php.ini"
+
 if [ ! -x "$BIN" ]; then
 	echo "Fann ikkje frankenphp-binæren i denne mappa." >&2
 	exit 1

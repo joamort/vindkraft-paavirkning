@@ -6,6 +6,9 @@ REM ingenting vert installert paa maskina.
 
 cd /d "%~dp0"
 
+REM Produksjons-PHP-innstillingar (elles lek deprecation-varsel inn i JSON-svara).
+set "PHPRC=%~dp0php.ini"
+
 if not exist "frankenphp.exe" (
 	echo Fann ikkje frankenphp.exe i denne mappa.
 	pause

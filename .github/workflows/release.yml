@@ -80,6 +80,7 @@ jobs:
 
           # --- Appen ---
           cp -r index.html favicon.ico css js assets backend cron Caddyfile LICENSE "$dir/"
+          cp scripts/dist/php.ini "$dir/"
           mkdir -p "$dir/cache/elevation" "$dir/cache/ratelimit" "$dir/logs"
           touch "$dir/cache/elevation/.gitkeep" "$dir/cache/ratelimit/.gitkeep"
 

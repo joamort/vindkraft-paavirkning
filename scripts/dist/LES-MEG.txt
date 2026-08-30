@@ -41,6 +41,7 @@ KVA LIGG I MAPPA
   frankenphp(.exe)   Webtenaren (PHP innebygd). Ingen installasjon.
   *.dll              (berre Windows) køyretidsbibliotek for frankenphp.exe.
   Caddyfile          Tenar-konfigurasjon (tryggingsheader, tilgangskontroll).
+  php.ini            PHP-innstillingar (produksjonsmodus).
   index.html, css/, js/, assets/, favicon.ico
   backend/, cron/    PHP-koden som hentar og reknar.
   cache/             Vert fylt ved bruk. Trygt å slette for å byrje på nytt.

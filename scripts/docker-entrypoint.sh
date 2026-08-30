@@ -5,6 +5,9 @@ set -e
 
 cd /app
 
+# Produksjons-PHP-innstillingar (elles lek deprecation-varsel inn i JSON-svara).
+export PHPRC=/app/php.ini
+
 if [ ! -f cache/turbines.json ] && [ -z "$VIND_SKIP_CACHE_BUILD" ]; then
 	echo "→ Byggjer turbin-cachen (fyrste gong, ~10 s, hentar data frå NVE)…"
 	# timeout så eit tregt/blokkert NVE-kall ikkje held serveren nede for evig.

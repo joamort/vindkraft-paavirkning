@@ -11,6 +11,7 @@ FROM dunglas/frankenphp:1-php8.3
 
 WORKDIR /app
 COPY . /app
+COPY scripts/dist/php.ini /app/php.ini
 
 # cache/ og logs/ vert normalt mappa inn som volum (sjå docker-compose.yml),
 # men må finnast og vere skrivbare også utan volum.
