@@ -484,8 +484,7 @@ class VindApp {
             lukk();
             felt.value = tekst;
             felt.blur();
-            this.kart.panorerTil(lat, lon);
-            this.kart.kart.setZoom(13);
+            this.kart.panorerTil(lat, lon, 13);
             this.settPunkt(lat, lon);
             // Etter settPunkt (som nullstiller han for alle andre vegar inn).
             this.sisteAdresse = tekst || null;
@@ -698,8 +697,7 @@ class VindApp {
             (pos) => {
                 ferdig();
                 const { latitude, longitude } = pos.coords;
-                this.kart.panorerTil(latitude, longitude);
-                this.kart.kart.setZoom(12);
+                this.kart.panorerTil(latitude, longitude, 12);
                 this.settPunkt(latitude, longitude);
             },
             (err) => {

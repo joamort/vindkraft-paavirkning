@@ -714,9 +714,18 @@ export class MapManager {
         markor.getElement()?.classList.toggle('turbin-utheva', paa);
     }
 
-    /** Panorer til ein turbin utan å endre zoom. */
-    panorerTil(lat, lon) {
-        this.kart.panTo([lat, lon]);
+    /**
+     * Panorer til eit punkt. Utan `zoom` vert zoomnivået ståande; med `zoom`
+     * vert senter og zoom sett i SAME operasjon — ein `panTo()` følgd av eit
+     * eige `setZoom()` startar to konkurrerande animasjonar, og zoomen endar
+     * då sentrert på den gamle staden, ikkje på målet.
+     */
+    panorerTil(lat, lon, zoom) {
+        if (typeof zoom === 'number') {
+            this.kart.setView([lat, lon], zoom);
+        } else {
+            this.kart.panTo([lat, lon]);
+        }
     }
 
     /** Vis eit informasjonsvindauge for eit anlegg/turbin. */
