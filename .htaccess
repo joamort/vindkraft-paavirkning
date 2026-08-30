@@ -1,0 +1,92 @@
+# CONFIG-VERSION: 2 (2026-08-24)
+# Bump talet over ved kvar endring, slik at filinnhaldet garantert skil seg frå
+# det som alt ligg på server (same konvensjon som PolitiKartet).
+#
+# Stadfest kva som faktisk er live med:
+#   curl -s -I https://littavalt.no/vind/index.html | grep -i content-security-policy
+
+# ============================================================ Tryggingsheader
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+
+    # CSP.
+    #
+    # script-src har INGEN 'unsafe-inline' — appen har ingen inline <script>
+    # og ingen onclick=-attributt. All interaksjon går via data-action og
+    # delegerte lyttarar. Held det slik.
+    #
+    # style-src treng 'unsafe-inline' fordi Leaflet set style-attributt direkte
+    # på kartelementa når det posisjonerer fliser og markørar.
+    #
+    # connect-src: berre vårt eige opphav. Alle eksterne API-kall (NVE,
+    # Kartverket WPS) går gjennom PHP-backenden — nettlesaren snakkar aldri
+    # direkte med dei. img-src må derimot tillate flis-tenarane.
+    #
+    # IKKJE FJERN server.arcgisonline.com FRÅ img-src. Han ser ut som eit
+    # reint Leaflet-behov (flybilete-bakgrunnslaget i 2D-kartet), men
+    # 3D-panoramaet hentar dei SAME flisane som <img crossOrigin="anonymous">
+    # og teiknar dei til eit lerret som vert tekstur på terrengmeshen
+    # (js/utils/SatelliteTexture.js, CLAUDE.md §17). At det er ei
+    # biletehenting og ikkje ein fetch() er nettopp difor: fetch() ville falle
+    # under connect-src og kravt anten ei CSP-utviding eller ein PHP-proxy.
+    # Blir direktivet stramma inn, feilar panoramaet STILLE — det fell tilbake
+    # til prosedyrefarge i staden for å gi ein feil.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com https://services.arcgisonline.com https://unpkg.com; connect-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+</IfModule>
+
+# ============================================================ Tilgangskontroll
+
+# Blokker alle punktfiler (.env, .git, ...)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Blokker sensitive filtypar (dokumentasjon, logger, backup, konfig)
+<FilesMatch "(^#.*#|\.(bak|config|dist|ini|log|md|sh|sql|sw[op]|ffs_db|mjs)|~)$">
+    Require all denied
+</FilesMatch>
+
+# Ingen fillister
+Options -Indexes
+
+# Fil-cachen for høgdeprofilar er reint internt arbeidsminne for PHP —
+# ingen grunn til å eksponere titusenvis av småfiler over web.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^cache/elevation/ - [F,L]
+    RewriteRule ^cache/ratelimit/ - [F,L]
+</IfModule>
+
+# tools/ er lokale dev-verktøy (Node), skal aldri køyre eller lesast frå web.
+<IfModule mod_rewrite.c>
+    RewriteRule ^tools/ - [F,L]
+</IfModule>
+
+# ============================================================ Yting
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css               "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType image/png              "access plus 1 month"
+    ExpiresByType image/svg+xml          "access plus 1 month"
+    # Turbin-cachen vert oppdatert dagleg av cron — kort levetid.
+    ExpiresByType application/json       "access plus 1 hour"
+</IfModule>
+
+# index.html skal alltid vera fersk, slik at nye JS-versjonar faktisk lastast.
+<FilesMatch "index\.html$">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache, must-revalidate"
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css
+    AddOutputFilterByType DEFLATE application/json application/javascript
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>

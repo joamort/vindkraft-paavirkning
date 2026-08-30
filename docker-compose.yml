@@ -1,0 +1,23 @@
+# Vindkraft-påverknad — køyr lokalt med:
+#
+#   docker compose up
+#
+# Opne så http://localhost:8011 i nettlesaren.
+#
+# All datahenting (NVE, Kartverket) går ut frå denne maskina via
+# PHP-backenden inne i containeren. Ingen mellomtenar.
+
+services:
+  vindkraft:
+    build: .
+    image: vindkraft-paavirkning
+    container_name: vindkraft
+    ports:
+      - "8011:8011"
+    volumes:
+      # Permanent cache og logg på verten, så data ikkje går tapt ved
+      # ombygging av containeren. Terreng endrar seg aldri — cachen er
+      # med vilje permanent (sjå CLAUDE.md).
+      - ./cache:/app/cache
+      - ./logs:/app/logs
+    restart: unless-stopped

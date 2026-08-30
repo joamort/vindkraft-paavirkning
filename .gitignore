@@ -1,0 +1,30 @@
+# Hemmelegheiter
+.env
+
+# Filbasert cache — vert generert av cron/fetch_turbines.php og ved bruk.
+# Skal aldri committast (endrar seg dagleg / veks utan grense).
+cache/turbines.json
+cache/areas.json
+cache/meta.json
+cache/layouts.json
+cache/elevation/*
+cache/ratelimit/*
+
+# Behald dei tomme mappene så dei finst og er skrivbare ved fyrste køyring.
+# («/*» framfor negasjonen — git stig ikkje ned i ei mappe som er ignorert med
+# trailing slash, så då ville .gitkeep-unntaket ikkje verke.)
+!cache/elevation/.gitkeep
+!cache/ratelimit/.gitkeep
+
+# Node er berre eit lokalt dev-verktøy (tools/), aldri i produksjon.
+node_modules/
+
+# Filbasert feillogg — sjå backend/services/Logger.php.
+logs/*.log
+logs/*.log.1
+
+# FreeFileSync-database frå lokal synkronisering.
+.sync.ffs_db
+
+# Byggeartefaktar frå release-workflowen.
+/dist/

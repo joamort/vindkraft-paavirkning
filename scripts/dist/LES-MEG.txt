@@ -1,0 +1,55 @@
+Vindkraft-påverknad — nedlastbar utgåve
+======================================
+
+Interaktivt kart som viser kva vindturbinar som faktisk er synlege frå eit
+sjølvvalt punkt, ut frå norske terrengdata — pluss støy, skyggekast og
+hinderlys.
+
+
+SLIK KØYRER DU
+--------------
+
+  Windows:        dobbeltklikk  start.bat
+  macOS:          dobbeltklikk  start.command   (eller køyr ./start.sh)
+  Linux:          køyr          ./start.sh
+
+Fyrste gong byggjer appen ein turbin-cache (~10 sekund, hentar opne data
+frå NVE). Deretter opnar http://localhost:8011 seg i nettlesaren.
+
+For å stoppe: lat att terminalvindauget (eller trykk Ctrl+C).
+
+
+PERSONVERN
+----------
+
+All datahenting går ut frå DIN maskin:
+
+  * Turbindata (NVE) og terrengdata (Kartverket) vert henta av den
+    innebygde PHP-backenden som køyrer lokalt her — ingen mellomtenar.
+  * Punktet du klikkar på kartet vert aldri sendt til nokon. Analysen
+    skjer på maskina di.
+
+Nettlesaren lastar i tillegg nokre bibliotek (Leaflet, Chart.js, Font
+Awesome, Three.js) frå offentlege CDN-ar, og kartbakgrunn/flyfoto frå
+Kartverket og Esri. Dette krev internett, men går direkte frå nettlesaren
+din utan mellomledd.
+
+
+KVA LIGG I MAPPA
+----------------
+
+  frankenphp(.exe)   Webtenaren (PHP innebygd). Ingen installasjon.
+  Caddyfile          Tenar-konfigurasjon (tryggingsheader, tilgangskontroll).
+  index.html, css/, js/, assets/, favicon.ico
+  backend/, cron/    PHP-koden som hentar og reknar.
+  cache/             Vert fylt ved bruk. Trygt å slette for å byrje på nytt.
+  logs/              Feillogg. Ingen koordinatar vert logga.
+
+
+OPPDATERE TURBINDATA
+--------------------
+
+Slett cache/turbines.json og start på nytt, så vert han bygd om.
+
+
+Lisens: MIT. Kjeldekode: https://github.com/joamort/vindkraft-paavirkning

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="nn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>Vindkraft-påverknad — kva ser og høyrer eg frå mitt punkt?</title>
+<meta name="description" content="Interaktivt kart som viser kva vindturbinar som faktisk er synlege frå eit sjølvvalt punkt, ut frå norske terrengdata — og eit forenkla støyestimat.">
+<meta name="color-scheme" content="light">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ===================== Topplinje ===================== -->
+<header class="topplinje">
+    <div class="merke">
+        <i class="fa-solid fa-fan"></i>
+        <div>
+            <h1>Vindkraft-påverknad</h1>
+            <span id="datakjelde" class="datakjelde">lastar …</span>
+        </div>
+    </div>
+
+    <div class="topplinje-verktoy">
+        <button type="button" class="knapp" data-action="min-posisjon">
+            <i class="fa-solid fa-location-crosshairs"></i><span>Min posisjon</span>
+        </button>
+        <button type="button" class="knapp" data-action="del-lenke">
+            <i class="fa-solid fa-share-nodes"></i><span>Del</span>
+        </button>
+        <button type="button" class="knapp" data-action="eksporter-analyserte" title="Eksporter dei analyserte turbinane som KML">
+            <i class="fa-solid fa-file-export"></i><span>Eksporter analyse (KML)</span>
+        </button>
+        <button type="button" class="knapp" data-action="eksporter-alle" title="Last ned heile (filtrerte) turbindatasettet som KML">
+            <i class="fa-solid fa-globe"></i><span>Eksporter alle (KML)</span>
+        </button>
+        <button type="button" class="knapp" data-action="veksle-info">
+            <i class="fa-solid fa-circle-info"></i><span>Om modellen</span>
+        </button>
+        <button type="button" class="knapp berre-mobil" data-action="veksle-panel" aria-label="Vis/skjul panel">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </div>
+</header>
+
+<!--
+  ANSVARSFRÅSKRIVING — PLAN.md §7 krev at denne står tydeleg og ALLTID synleg,
+  ikkje gøymd bak ei footer-lenke. Ho ligg difor rett under topplinja, i
+  normal flyt, og kan ikkje lukkast bort.
+-->
+<div class="disclaimer" role="note">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <p>
+        <strong>Forenkla illustrasjon — ikkje ei konsekvensutgreiing.</strong>
+        Terrengmodellen er bar bakke: <strong>skog og bygningar er ikkje med</strong>, så
+        synlegheita vert lett overvurdert. Turbinmål og lydeffekt finst ikkje i NVE-datasettet: dei er
+        anten <strong>estimerte</strong> frå merkeeffekt, eller <strong>henta frå søknadsdokument</strong>
+        der me har funne dei. Støytala er grove overslag, ikkje ein akustisk fagrapport.
+        <button type="button" class="lenkeknapp" data-action="veksle-info">Les meir om kva modellen kan og ikkje kan</button>
+    </p>
+</div>
+
+<!-- ===================== Hovudoppsett ===================== -->
+<main class="oppsett">
+
+    <!-- Kart -->
+    <section class="kartomrade">
+        <div id="kart" role="application" aria-label="Kart over vindkraftanlegg"></div>
+
+        <div class="kart-kontrollar">
+            <div class="kontrollgruppe">
+                <span class="kontroll-tittel">Bakgrunn</span>
+                <div class="knapperad">
+                    <button type="button" class="minknapp aktiv" data-action="bakgrunn" data-lag="topo">Topo</button>
+                    <button type="button" class="minknapp" data-action="bakgrunn" data-lag="gratone">Gråtone</button>
+                    <button type="button" class="minknapp" data-action="bakgrunn" data-lag="flybilete">Flyfoto</button>
+                </div>
+            </div>
+
+            <div class="kontrollgruppe">
+                <span class="kontroll-tittel">Analyseradius</span>
+                <select id="radius-vel" class="vel" aria-label="Analyseradius"></select>
+                <button type="button" class="minknapp brei" data-action="zoom-radius">
+                    <i class="fa-solid fa-magnifying-glass-location"></i> Zoom til radius
+                </button>
+            </div>
+
+            <div class="kontrollgruppe">
+                <span class="kontroll-tittel">Vis status</span>
+                <div id="status-filter" class="status-filter"></div>
+                <button type="button" class="minknapp brei aktiv" data-action="veksle-omrader">
+                    <i class="fa-solid fa-draw-polygon"></i> Anleggsområde
+                </button>
+            </div>
+
+            <div class="kontrollgruppe">
+                <span class="kontroll-tittel">Natt</span>
+                <button type="button" class="minknapp brei" data-action="veksle-natt"
+                        title="Vis dei påbodne hinderlysa slik dei ville stått mot ein mørk himmel">
+                    <i class="fa-solid fa-moon"></i> Hinderlys
+                </button>
+            </div>
+        </div>
+
+        <!--
+          Stadfestingsboksen. Ligg over kartet (ikkje i sidepanelet) fordi han
+          skal stå ved markøren han gjeld, og fordi sidepanelet kan vera
+          skjult på mobil.
+        -->
+        <div id="stadfest" class="stadfest" role="status" aria-live="polite"></div>
+
+        <div id="framdrift" class="framdrift" role="status" aria-live="polite"></div>
+    </section>
+
+    <!-- Sidepanel -->
+    <aside id="sidepanel" class="sidepanel">
+        <div id="panel-innhald" class="panel-innhald"></div>
+        <div id="detalj-panel" class="detalj-panel"></div>
+    </aside>
+</main>
+
+<!-- ===================== Info-modal ===================== -->
+<div id="info-modal" class="modal">
+    <div class="modal-boks" role="dialog" aria-modal="true" aria-labelledby="info-tittel">
+        <div class="modal-topp">
+            <h2 id="info-tittel">Om modellen</h2>
+            <button type="button" class="ikonknapp" data-action="veksle-info" aria-label="Lukk">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-innhald">
+            <h3>Kva appen gjer</h3>
+            <p>
+                Du set eit punkt i kartet. Appen finn alle vindturbinar innanfor den valde radiusen,
+                hentar ein <strong>terrengprofil</strong> frå Kartverket langs linja mellom punktet og
+                kvar turbin, og reknar ut kva som faktisk stikk opp over terrenget — ikkje berre kor
+                langt unna turbinen er.
+            </p>
+
+            <h3>Synlegheit</h3>
+            <p>
+                For kvart terrengpunkt langs profilen reknar appen ut kor høgt ein stråle frå auget ditt
+                (1,6 m over bakken) som så vidt skrapar det punktet, ville nå fram til turbinen. Den
+                høgaste av desse strålane er <em>terrenghorisonten</em>. Alt på turbinen over horisonten
+                er synleg; alt under er skjult. Berekninga korrigerer for
+                <strong>jordkrumming og atmosfærisk refraksjon</strong>, som utgjer nesten 7 meter på 20 km.
+            </p>
+            <p>
+                Fordi tårnfoten på eit anlegg oppe på ein fjellrygg nesten alltid er gøymd bak terrenget
+                framfor, er «godt synleg» reservert for turbinar der <em>både</em> rotoren står fritt og
+                minst 90 % av høgda er over horisonten.
+            </p>
+
+            <h3>Visuell dominans</h3>
+            <p>
+                Kategorien byggjer på avstand målt i <strong>rotordiameter</strong> — same turbin verkar
+                heilt annleis på 3 rotordiameter enn på 30. Dette er ein <strong>heuristikk frå
+                internasjonal landskapsanalyse-litteratur</strong>, ikkje ein norsk forskriftsverdi.
+                Bruk han som ein rettleiande peikepinn, ikkje ein fasit.
+            </p>
+
+            <h3>Støy</h3>
+            <p>
+                Modellen bruker grunnforma frå den nordiske berekningsmetoden for vindmøllestøy:
+                sfærisk spreiing, bakkerefleks, luftabsorpsjon, og eit grovt tillegg for terrengskjerming
+                når navet er skjult. Bidraga frå kvar turbin summerast energetisk.
+                Resultatet visast som estimert <strong>L<sub>den</sub></strong> og fargekodast mot
+                <strong>T-1442</strong> si rettleiande grense på L<sub>den</sub> 45 dB.
+            </p>
+            <p class="aatvaring-tekst">
+                Dette er <strong>ikkje</strong> ein ISO 9613-2-berekning. Ekte støyvurderingar i
+                konsesjonssaker bruker frekvensoppløyst modellering med målte kjeldedata per turbinmodell
+                og meteorologisk statistikk. Avviket kan vera fleire desibel.
+            </p>
+
+            <h3>Hinderlys om natta</h3>
+            <p>
+                Vindturbinar er luftfartshinder og skal merkjast med lys. Kravet står i
+                <strong>forskrift 15. juli 2014 nr. 980</strong> om rapportering, registrering og merking av
+                luftfartshinder (BSL E 2-1) — <em>ikkje</em> i den eldre 2002-forskrifta som ofte vert sitert.
+                Merkeplikta startar ved <strong>60 m totalhøgd</strong>, målt til vengetuppen i høgaste stilling.
+            </p>
+            <ul>
+                <li><strong>Under 150 m:</strong> to <em>mellomintensitets</em> hinderlys type B eller C på
+                    nacellen — <strong>raudt</strong>, 2 000 candela, fast eller blinkande.</li>
+                <li><strong>Frå 150 m:</strong> to <em>høyintensitets</em> hinderlys type B på nacellen —
+                    <strong>kvitt og alltid blinkande</strong> (100 000 cd om dagen, nedsenka til 2 000 cd om
+                    natta) — pluss raude lavintensitetslys nedover tårnet, høgst 75 m mellom kvart nivå.</li>
+            </ul>
+            <p>
+                Toppmerkinga <strong>skiftar altså farge ved 150 m</strong>. Appen reknar synlegheita for kvart
+                lyspunkt for seg, mot same terrenghorisont som resten av modellen: eit navlys kan vere skjult
+                sjølv om vengetuppen står fritt, og omvendt. Lysstyrken vert rekna om til
+                <strong>tilsynelatande stjernemagnitude</strong>, fordi «2 000 candela» ikkje seier nokon noko,
+                medan «om lag som Venus» gjer det. Omrekninga tek med atmosfærisk demping for ei klar natt.
+            </p>
+            <p class="aatvaring-tekst">
+                Dette er <strong>minstekravet i forskrifta</strong>, ikkje eit register over kva som står
+                montert. Sidan 2024 kan konsesjonæren søkje om <strong>behovsstyrt lyssetting (ADLS)</strong>,
+                der radar og transpondersignal slår lyset på berre når det er fly i nærleiken. For anlegg med
+                fem eller fleire turbinar kan Luftfartstilsynet dessutan godkjenne at berre turbinane i
+                <strong>ytterkanten</strong> vert merkte. NVE-datasettet inneheld ingenting om kva anlegg som
+                har slike godkjenningar, så biletet appen viser er eit <strong>maksimum</strong>.
+            </p>
+
+            <h3>Skyggekast</h3>
+            <p>
+                Når sola står lågt bak ein turbin, sveiper rotorskuggen over landskapet. Appen reknar
+                <strong>teoretisk</strong> skyggekast: rein astronomi og geometri, med skyfri himmel heile året
+                og rotoren alltid vend rett mot sola — verste tenkelege tilfelle. Solposisjonen kjem frå
+                NOAA sine likningar, rekna i nettlesaren; ingen ekstern teneste er involvert.
+            </p>
+            <p>
+                <strong>Noreg har inga fastsett grenseverdi for skyggekast.</strong> NVE har derimot ein
+                forvaltningspraksis (veileder 2/2014) med to tilrådde grenser for bygningar med
+                skyggekastfølsam bruk: høgst <strong>30 timar i året eller 30 minutt om dagen teoretisk</strong>,
+                og høgst <strong>8 timar i året faktisk</strong>. Appen samanliknar mot
+                <em>30-timarsgrensa</em>, fordi det er den som gjeld same storleik som modellen reknar.
+            </p>
+            <p class="aatvaring-tekst">
+                Det <em>faktiske</em> skyggekastet er alltid lågare enn det teoretiske — skydekke, vindretning
+                som vrir rotoren bort frå verste vinkel, og turbinar som står stille trekkjer alle same vegen.
+                Forholdet mellom NVE sine to grenser (30 : 8) er om lag den reduksjonen ein kan vente.
+                Modellen kan ikkje rekne det faktiske talet: det krev sky- og vindstatistikk for staden.
+            </p>
+
+            <h3>Turbinar utan fastsett posisjon</h3>
+            <p>
+                Anlegg under konsesjonshandsaming har <strong>ingen</strong> turbinkoordinatar hos NVE — dei
+                vert først fastsette i detaljplanen. Men NVE har det <strong>verkelege planområdet</strong> som
+                polygon. Der me har eit polygon og eit rimeleg turbintal, plasserer appen difor turbinane sjølv:
+                eit rutenett av kandidatpunkt inne i området, terrenghøgd frå Kartverket i kvart av dei, og så
+                eit utval som føretrekkjer <strong>høgderyggar</strong> — der norske vindparkar nesten alltid
+                vert lagde — med minst tre rotordiameter mellom kvar turbin, og utan å setje turbinar på vatn.
+            </p>
+            <p class="aatvaring-tekst">
+                Desse posisjonane er <strong>estimerte av oss, ikkje omsøkte</strong>, og er merkte med eit eige
+                symbol på kartet. Me har verken vinddata, grunnforhold, reindriftsomsyn eller vegplan — alt saman
+                ting som styrer ei verkeleg plassering. Held ein metoden opp mot vindparkar som faktisk ER bygde,
+                hamnar kvar verkelege turbin typisk innanfor <strong>170–180 m</strong> frå eit estimert punkt.
+                Det er godt nok til å vise kva ei utbygging inneber, men seier ingenting om kvar akkurat éin
+                turbin kjem.
+            </p>
+
+            <h3>Kjende avgrensingar</h3>
+            <ul>
+                <li><strong>Bar bakke.</strong> Terrengmodellen (DTM) inneheld ikkje skog, bygningar eller
+                    andre sikthindringar. Appen vil difor melde «synleg» for turbinar som i praksis er
+                    skjulte bak skog.</li>
+                <li><strong>Turbinmål: «estimert» eller «frå søknad».</strong> Navhøgd og rotordiameter finst
+                    ikkje i NVE sitt datasett. For dei fleste anlegg er dei difor rekna ut frå merkeeffekt
+                    per turbin mot ein tabell av kjende turbinmodellar, og markerte
+                    <span class="merke merke-estimat">estimert</span>. For eit utval anlegg har me lese dei
+                    faktiske meldings- og søknadsdokumenta og henta tala derifrå — dei er markerte
+                    <span class="merke merke-kjelde">frå søknad</span>, med lenke til kjelda i
+                    detaljvisinga. Merk at <strong>det som er søkt om, ikkje nødvendigvis er det som vert
+                    bygd</strong>, og at appen viser øvste ende når søknaden oppgir eit spenn.</li>
+                <li><strong>Planlagde anlegg har ingen turbinposisjonar.</strong> Der NVE har eit planområde,
+                    plasserer appen turbinane sjølv inne i det, merkte
+                    <span class="merke merke-estimert-pos">estimert plassering</span>. Manglar polygonet,
+                    fell appen tilbake til eitt senterpunkt for heile anlegget, merkt «heile anlegget».</li>
+                <li><strong>Følsamt for nærterreng.</strong> Ein liten haug rett ved punktet kan skjule ein
+                    heil vindpark. Appen flaggar dette, men flytt gjerne punktet litt for å teste.</li>
+            </ul>
+
+            <h3>Datakjelder</h3>
+            <ul>
+                <li><strong>NVE</strong> — vindkraftanlegg og turbinposisjonar (<code>Vindkraft2</code>)</li>
+                <li><strong>Kartverket</strong> — terrenghøgder og høgdeprofilar (høgdedata-API og WPS)</li>
+                <li>Bakgrunnskart frå Kartverket og Esri</li>
+            </ul>
+
+            <h3>Personvern</h3>
+            <p>
+                Punktet du vel vert <strong>ikkje lagra på serveren</strong>. Det brukast berre til å slå opp
+                terrengdata, og terrengsvara mellomlagrast anonymt på koordinat. Posisjonen din hentast
+                aldri automatisk — berre når du sjølv trykkjer «Min posisjon».
+            </p>
+        </div>
+    </div>
+</div>
+
+<div id="panorama" class="panorama" aria-hidden="true"></div>
+
+<div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

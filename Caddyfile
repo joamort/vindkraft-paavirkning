@@ -1,0 +1,55 @@
+# Caddyfile — konfigurasjon for FrankenPHP-serveren som følgjer med
+# nedlastbare utgåver og Docker-biletet.
+#
+# .htaccess i rota gjeld berre den eksisterande Apache-hostinga på
+# littavalt.no. FrankenPHP (Caddy) les ikkje .htaccess, så tryggingsheaderane
+# og tilgangskontrollen derfrå er reproduserte her. Held du .htaccess og denne
+# fila i synk, oppfører alle tre køyremåtane seg likt.
+#
+# Miljøvariablar:
+#   VIND_ADDR  — lytteadresse (default http://localhost:8011; Docker set 0.0.0.0)
+#   VIND_ROOT  — rotmappe for appen (default gjeldande mappe)
+{
+	frankenphp
+	auto_https off
+	admin off
+	persist_config off
+}
+
+{$VIND_ADDR:http://localhost:8011} {
+	root * {$VIND_ROOT:.}
+	encode zstd gzip
+
+	# ---------------------------------------------------- Tryggingsheader
+	# script-src har INGEN 'unsafe-inline'. connect-src er berre 'self' —
+	# alle eksterne API-kall (NVE, Kartverket WPS) går gjennom PHP-backenden
+	# på denne maskina, nettlesaren snakkar aldri direkte med dei.
+	# IKKJE fjern arcgisonline frå img-src: 3D-panoramaet hentar dei same
+	# flisane som <img crossOrigin> og teiknar dei som terrengtekstur.
+	# Sjå .htaccess og CLAUDE.md §17 for full grunngjeving.
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com https://services.arcgisonline.com https://unpkg.com; connect-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+	}
+
+	# index.html skal alltid revaliderast, slik at nye JS-versjonar lastast.
+	@index path / /index.html
+	header @index Cache-Control "no-cache, must-revalidate"
+
+	# ---------------------------------------------------- Tilgangskontroll
+	# Speglar <FilesMatch> / RewriteRule i .htaccess.
+	@sensitiv_filtype path_regexp \.(bak|config|dist|ini|log|md|sh|sql|sw[op]|ffs_db|mjs)$
+	@punktfil path_regexp /\.[^/]
+	@internt path /cache/elevation/* /cache/ratelimit/* /cache/layouts.json /cache/meta.json /logs/* /tools/*
+
+	route {
+		respond @sensitiv_filtype 403
+		respond @punktfil 403
+		respond @internt 403
+		php_server
+	}
+}

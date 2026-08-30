@@ -1,0 +1,1693 @@
+/**
+ * css/styles.css
+ *
+ * Mobile-first. Design tokens som CSS-variablar (TECH_STACK.md).
+ * Oppsettet er eit to-kolonne-grid på desktop (kart + panel) som fell saman
+ * til eit fullskjerms kart med eit skyvbart panel på mobil.
+ */
+
+:root {
+    /* Fargesystem */
+    --bg:            #f1f5f9;
+    --flate:         #ffffff;
+    --flate-2:       #f8fafc;
+    --kant:          #e2e8f0;
+    --kant-sterk:    #cbd5e1;
+    --tekst:         #0f172a;
+    --tekst-svak:    #64748b;
+    --tekst-svakast: #94a3b8;
+
+    --primaer:       #0ea5e9;
+    --primaer-mork:  #0284c7;
+    --primaer-lys:   #e0f2fe;
+
+    --gronn:         #16a34a;
+    --gronn-lys:     #dcfce7;
+    --gul:           #ca8a04;
+    --gul-lys:       #fef9c3;
+    --raud:          #dc2626;
+    --raud-lys:      #fee2e2;
+    --oransje:       #ea580c;
+
+    /* Mål */
+    --panel-breidd:  clamp(360px, 30vw, 460px);
+    --topp-hogd:     56px;
+    --radius:        10px;
+    --radius-liten:  6px;
+
+    --skugge:        0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --skugge-stor:   0 10px 25px rgba(15, 23, 42, 0.12);
+
+    --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: var(--font);
+    color: var(--tekst);
+    background: var(--bg);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+
+/* =================================================== Topplinje */
+
+.topplinje {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: var(--topp-hogd);
+    padding: 0 14px;
+    background: var(--flate);
+    border-bottom: 1px solid var(--kant);
+    flex-shrink: 0;
+    z-index: 1200;
+}
+
+.merke { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.merke > i {
+    font-size: 20px;
+    color: var(--primaer);
+    animation: snurr 8s linear infinite;
+}
+
+@keyframes snurr { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .merke > i { animation: none; }
+}
+
+.merke h1 { font-size: 16px; white-space: nowrap; }
+
+.datakjelde { font-size: 11px; color: var(--tekst-svak); }
+
+.topplinje-verktoy { display: flex; gap: 6px; }
+
+.knapp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--tekst);
+    background: var(--flate-2);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius-liten);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.knapp:hover { background: var(--primaer-lys); border-color: var(--primaer); }
+
+.berre-mobil { display: none; }
+
+/* =================================================== Disclaimer */
+
+.disclaimer {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 16px;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    font-size: 12.5px;
+    line-height: 1.45;
+    flex-shrink: 0;
+    z-index: 1100;
+}
+
+.disclaimer > i { color: #b45309; margin-top: 2px; flex-shrink: 0; }
+.disclaimer p { margin: 0; color: #78350f; }
+
+.lenkeknapp {
+    font: inherit;
+    color: var(--primaer-mork);
+    background: none;
+    border: none;
+    padding: 0;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* =================================================== Oppsett */
+
+.oppsett {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr var(--panel-breidd);
+    min-height: 0;
+}
+
+.kartomrade { position: relative; min-height: 0; }
+
+#kart { width: 100%; height: 100%; background: #dbeafe; }
+
+/* =================================================== Kartkontrollar */
+
+.kart-kontrollar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 230px;
+}
+
+.kontrollgruppe {
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius);
+    box-shadow: var(--skugge);
+    padding: 9px 10px;
+}
+
+.kontroll-tittel {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tekst-svak);
+    margin-bottom: 6px;
+}
+
+.knapperad { display: flex; gap: 4px; }
+
+.minknapp {
+    flex: 1;
+    padding: 5px 8px;
+    font: inherit;
+    font-size: 12px;
+    background: var(--flate-2);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius-liten);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+
+.minknapp:hover { background: var(--primaer-lys); }
+
+.minknapp.aktiv {
+    background: var(--primaer);
+    border-color: var(--primaer);
+    color: #fff;
+    font-weight: 600;
+}
+
+.minknapp.brei { width: 100%; margin-top: 6px; }
+
+/**
+ * Skogbrytaren i panoramaet kan måtte hente data fyrst. `lastar` er den
+ * tilstanden — ikkje av, ikkje på, men undervegs. Pulsen er der for at eit
+ * kall som tek eit par sekund ikkje skal lesast som ein knapp som ikkje verkar.
+ */
+.minknapp.lastar {
+    opacity: 0.6;
+    cursor: progress;
+    animation: minknapp-puls 1.1s ease-in-out infinite;
+}
+
+@keyframes minknapp-puls {
+    50% { opacity: 0.95; }
+}
+
+/** Skogbrytaren skal lesast som «skog», ikkje som endå ein blå knapp. */
+#panorama-skog-knapp.aktiv {
+    background: #1f5c3a;
+    border-color: #1f5c3a;
+}
+
+.vel {
+    width: 100%;
+    padding: 5px 8px;
+    font: inherit;
+    font-size: 12px;
+    border: 1px solid var(--kant);
+    border-radius: var(--radius-liten);
+    background: var(--flate-2);
+    cursor: pointer;
+}
+
+.status-filter { display: flex; flex-direction: column; gap: 3px; }
+
+.status-val {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 1px 0;
+}
+
+.status-val input { margin: 0; cursor: pointer; accent-color: var(--primaer); }
+
+.status-prikk {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ============================================== Stadfest punkt
+ *
+ * Ligg over kartet, litt høgare enn framdriftsboksen, slik at dei to aldri
+ * ligg oppå kvarandre i overgangen frå «stadfesta» til «hentar data».
+ */
+
+.stadfest {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 960;
+    display: none;
+    max-width: min(520px, calc(100% - 24px));
+}
+
+.stadfest.synleg { display: block; }
+
+.stadfest-boks {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid var(--kant-sterk);
+    border-left: 4px solid var(--primaer);
+    border-radius: var(--radius);
+    box-shadow: var(--skugge-stor);
+    padding: 10px 12px 10px 14px;
+}
+
+.stadfest-tekst { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 12.5px; }
+.stadfest-tekst strong { font-size: 13.5px; }
+.stadfest-tekst span { color: var(--tekst-svak); }
+.stadfest-hint { font-size: 11.5px; }
+
+.stadfest-knappar { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+.knapp-primaer {
+    background: var(--primaer);
+    color: #fff;
+    border-color: var(--primaer-mork);
+    white-space: nowrap;
+}
+.knapp-primaer:hover { background: var(--primaer-mork); }
+
+/*
+ * KANDIDATMARKØREN.
+ *
+ * Med vilje tydeleg svakare enn den analyserte markøren: open kontur, dempa
+ * gråblå farge og ein roleg puls. Lesaren skal aldri vere i tvil om kva punkt
+ * tala i panelet gjeld.
+ */
+.kandidat-punkt-ikon {
+    color: #64748b;
+    font-size: 28px;
+    text-align: center;
+    line-height: 1;
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.4));
+    opacity: 0.85;
+    animation: kandidat-puls 1.8s ease-in-out infinite;
+}
+
+@keyframes kandidat-puls {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kandidat-punkt-ikon { animation: none; }
+}
+
+.tomtilstand kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    padding: 1px 5px;
+    border: 1px solid var(--kant-sterk);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--flate);
+}
+
+/* =================================================== Framdrift */
+
+.framdrift {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 950;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius);
+    box-shadow: var(--skugge-stor);
+    padding: 10px 16px;
+    min-width: 240px;
+    display: none;
+}
+
+.framdrift.synleg { display: block; }
+
+.framdrift-tekst { font-size: 12.5px; margin-bottom: 6px; color: var(--tekst-svak); }
+
+.framdrift-spor {
+    height: 4px;
+    background: var(--kant);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.framdrift-fyll {
+    height: 100%;
+    background: var(--primaer);
+    border-radius: 2px;
+    transition: width 0.25s ease;
+}
+
+/* =================================================== Sidepanel */
+
+.sidepanel {
+    background: var(--flate);
+    border-left: 1px solid var(--kant);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    position: relative;
+}
+
+.panel-innhald { padding: 14px; }
+
+/* =================================================== Tomtilstand */
+
+.tomtilstand {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--tekst-svak);
+}
+
+.tomtilstand > i { font-size: 40px; color: var(--kant-sterk); margin-bottom: 14px; }
+.tomtilstand h2 { font-size: 17px; color: var(--tekst); margin-bottom: 8px; }
+.tomtilstand p { font-size: 13.5px; margin: 0 0 10px; }
+.tomtilstand.liten { padding: 28px 16px; }
+
+.tomtilstand-hint {
+    background: var(--flate-2);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius-liten);
+    padding: 9px 12px;
+    font-size: 12.5px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.tomtilstand-hint i { color: var(--gul); margin-top: 2px; }
+
+/* =================================================== Samandrag */
+
+.samandrag { margin-bottom: 18px; }
+
+.samandrag-topp h2 { font-size: 16px; }
+
+.punkt-info {
+    font-size: 11.5px;
+    color: var(--tekst-svak);
+    margin: 3px 0 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.nokkeltal {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+    margin-bottom: 12px;
+}
+
+.nokkeltal-kort {
+    background: var(--flate-2);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius);
+    padding: 9px 8px;
+    text-align: center;
+}
+
+.nt-verdi {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--primaer-mork);
+    font-variant-numeric: tabular-nums;
+}
+
+.nt-av { font-size: 12px; font-weight: 500; color: var(--tekst-svak); }
+
+.nt-etikett {
+    display: block;
+    font-size: 10.5px;
+    color: var(--tekst-svak);
+    margin-top: 3px;
+    line-height: 1.25;
+}
+
+.samandrag-detaljar {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 0 0 12px;
+    font-size: 12.5px;
+}
+
+.samandrag-detaljar dt { color: var(--tekst-svak); }
+.samandrag-detaljar dd { margin: 0; }
+
+/* =================================================== Støyboks */
+
+.stoy-boks {
+    border: 1px solid var(--kant);
+    border-left-width: 4px;
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    background: var(--flate-2);
+}
+
+.stoy-boks.stoy-lav     { border-left-color: var(--gronn); background: var(--gronn-lys); }
+.stoy-boks.stoy-moderat { border-left-color: var(--gul);   background: var(--gul-lys); }
+.stoy-boks.stoy-hoy     { border-left-color: var(--raud);  background: var(--raud-lys); }
+.stoy-boks.stoy-ukjent  { border-left-color: var(--kant-sterk); }
+
+.stoy-topp {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.stoy-etikett { font-size: 12px; font-weight: 600; }
+
+.stoy-verdi {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.stoy-under {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--tekst-svak);
+    margin-top: 1px;
+}
+
+.stoy-forklaring {
+    font-size: 11px;
+    color: var(--tekst-svak);
+    margin: 8px 0 0;
+    line-height: 1.4;
+}
+
+/* =================================================== Varsel */
+
+.varsel {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    padding: 9px 11px;
+    border-radius: var(--radius-liten);
+    font-size: 12px;
+    line-height: 1.45;
+    margin-top: 10px;
+}
+
+.varsel > i { margin-top: 2px; flex-shrink: 0; }
+.varsel.liten { font-size: 11.5px; padding: 8px 10px; }
+
+.varsel-info { background: var(--primaer-lys); color: #075985; }
+.varsel-info > i { color: var(--primaer-mork); }
+
+.varsel-aatvaring { background: #fffbeb; color: #78350f; }
+.varsel-aatvaring > i { color: #b45309; }
+
+/* =================================================== Turbinliste */
+
+.turbinliste h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--tekst-svak);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.turbinliste .tal {
+    background: var(--kant);
+    color: var(--tekst-svak);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 11px;
+}
+
+.turbin-ul { list-style: none; margin: 0; padding: 0; }
+
+.turbin-rad {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    font: inherit;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--kant);
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.turbin-rad:hover { background: var(--flate-2); }
+
+.rad-ikon {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.syn-synleg  { background: var(--gronn-lys); color: var(--gronn); }
+.syn-delvis  { background: #ecfccb; color: #65a30d; }
+.syn-savidt  { background: var(--gul-lys); color: var(--gul); }
+.syn-skjult  { background: var(--bg); color: var(--tekst-svakast); }
+.syn-ukjent  { background: var(--bg); color: var(--kant-sterk); }
+
+.rad-hovud { flex: 1; min-width: 0; }
+
+.rad-namn {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 550;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rad-meta {
+    display: block;
+    font-size: 11.5px;
+    color: var(--tekst-svak);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rad-hale { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+
+.rad-stoy {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+.rad-stoy.stoy-lav     { background: var(--gronn-lys); color: #15803d; }
+.rad-stoy.stoy-moderat { background: var(--gul-lys);   color: #a16207; }
+.rad-stoy.stoy-hoy     { background: var(--raud-lys);  color: #b91c1c; }
+.rad-stoy.stoy-ukjent,
+.rad-stoy.tom          { background: var(--bg); color: var(--tekst-svakast); }
+
+.rad-pil { color: var(--kant-sterk); font-size: 11px; }
+
+.merke-anlegg, .merke-estimat, .merke-kjelde, .merke-flytta {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.merke-anlegg  { background: var(--primaer-lys); color: #0369a1; }
+.merke-estimat { background: #fef3c7; color: #92400e; }
+/* Grønt, ikkje gult: dette er eit tal nokon faktisk har søkt om, ikkje eit gjett. */
+.merke-kjelde  { background: #dcfce7; color: #166534; }
+
+/* Kjeldelenke under turbinmåla i detaljvisinga. */
+.mal-kjelde {
+    display: block;
+    margin-top: 4px;
+}
+.mal-kjelde a {
+    font-size: 12px;
+    color: var(--primaer);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.mal-kjelde a:hover   { text-decoration: underline; }
+.mal-kjelde .hint     { display: block; margin-top: 2px; }
+
+/* =================================================== Detaljpanel */
+
+.detalj-panel {
+    position: sticky;
+    bottom: 0;
+    background: var(--flate);
+    border-top: 2px solid var(--primaer);
+    box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.1);
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.28s ease;
+}
+
+.detalj-panel.open {
+    max-height: 78vh;
+    overflow-y: auto;
+    padding: 14px;
+}
+
+.detalj-topp {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.detalj-topp h3 { font-size: 15px; }
+
+.detalj-undertittel { font-size: 11.5px; color: var(--tekst-svak); margin: 2px 0 0; }
+
+.ikonknapp {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: var(--tekst-svak);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: var(--radius-liten);
+    flex-shrink: 0;
+}
+
+.ikonknapp:hover { background: var(--bg); color: var(--tekst); }
+
+.detalj-status {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 11px;
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+}
+
+.detalj-status > i { font-size: 18px; }
+.detalj-status strong { display: block; font-size: 13.5px; }
+.detalj-status span { font-size: 11.5px; opacity: 0.85; }
+
+.blokkering {
+    font-size: 12px;
+    color: var(--tekst-svak);
+    background: var(--flate-2);
+    border-left: 3px solid var(--oransje);
+    padding: 7px 10px;
+    margin: 0 0 10px;
+    border-radius: 0 var(--radius-liten) var(--radius-liten) 0;
+}
+
+.graf-boks {
+    height: 230px;
+    margin-bottom: 12px;
+    background: var(--flate-2);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius);
+    padding: 8px;
+}
+
+.detalj-tabell {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 7px 14px;
+    font-size: 12.5px;
+    margin: 0;
+}
+
+.detalj-tabell dt { color: var(--tekst-svak); }
+.detalj-tabell dd { margin: 0; }
+
+.detalj-tabell .hint {
+    display: block;
+    font-size: 11px;
+    color: var(--tekst-svakast);
+}
+
+.pille {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.pille.stoy-lav     { background: var(--gronn-lys); color: #15803d; }
+.pille.stoy-moderat { background: var(--gul-lys);   color: #a16207; }
+.pille.stoy-hoy     { background: var(--raud-lys);  color: #b91c1c; }
+.pille.stoy-ukjent  { background: var(--bg); color: var(--tekst-svak); }
+
+/* =================================================== Kartmarkørar */
+
+.mitt-punkt-ikon {
+    color: var(--primaer-mork);
+    font-size: 30px;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    display: grid;
+    place-items: center;
+    background: none;
+    border: none;
+}
+
+.cluster-ikon { background: none; border: none; }
+
+.cluster-boble {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(14, 165, 233, 0.9);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.turbin-plassholdar { stroke-dasharray: 4 3; }
+
+.kart-popup { font-family: var(--font); font-size: 12.5px; min-width: 190px; }
+.kart-popup strong { font-size: 13.5px; }
+.popup-status { font-weight: 600; font-size: 11.5px; margin: 2px 0 5px; }
+.popup-meta { color: var(--tekst-svak); font-size: 11.5px; }
+
+.popup-aatvaring {
+    margin-top: 6px;
+    padding: 5px 7px;
+    background: var(--primaer-lys);
+    border-radius: var(--radius-liten);
+    font-size: 11px;
+    color: #075985;
+}
+
+/* =================================================== Modal */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+}
+
+.modal.open { display: flex; }
+
+.modal-boks {
+    background: var(--flate);
+    border-radius: 14px;
+    max-width: 660px;
+    width: 100%;
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--skugge-stor);
+}
+
+.modal-topp {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--kant);
+}
+
+.modal-topp h2 { font-size: 17px; }
+
+.modal-innhald { padding: 16px 18px 22px; overflow-y: auto; font-size: 13.5px; }
+
+.modal-innhald h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--primaer-mork);
+    margin: 18px 0 6px;
+}
+
+.modal-innhald h3:first-child { margin-top: 0; }
+.modal-innhald p { margin: 0 0 9px; }
+.modal-innhald ul { margin: 0 0 9px; padding-left: 20px; }
+.modal-innhald li { margin-bottom: 5px; }
+
+.modal-innhald code {
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.aatvaring-tekst {
+    background: #fffbeb;
+    border-left: 3px solid #b45309;
+    padding: 9px 11px;
+    color: #78350f;
+    border-radius: 0 var(--radius-liten) var(--radius-liten) 0;
+}
+
+/* =================================================== Toast */
+
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    background: #1e293b;
+    color: #fff;
+    font-size: 13px;
+    box-shadow: var(--skugge-stor);
+    animation: toast-inn 0.25s ease;
+    max-width: 90vw;
+}
+
+.toast.success { background: #15803d; }
+.toast.error   { background: #b91c1c; }
+.toast.warning { background: #a16207; }
+.toast.info    { background: #0369a1; }
+
+.toast-ut { opacity: 0; transform: translateY(12px); transition: all 0.3s; }
+
+@keyframes toast-inn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================== Nattmodus / hinderlys
+ *
+ * Kartverket har ingen mørk flisstil. I staden dempast SJØLVE FLISLAGET med
+ * eit filter. Leaflet legg fliser og vektorar i kvar sin «pane», så
+ * lyspunkta står att i full styrke over den dempa bakgrunnen — nettopp den
+ * kontrasten nattmodusen skal demonstrere.
+ */
+
+.nattmodus .leaflet-tile-pane {
+    filter: brightness(0.32) saturate(0.35) contrast(1.15);
+}
+
+.nattmodus .leaflet-container { background: #05070d; }
+
+/*
+ * Turbin-, område- og siktlinjelaga skal ikkje stele merksemd frå lysa.
+ * Hinderlysa ligg i sin EIGEN pane (sjå MapManager.init) og vert difor ikkje
+ * råka av dempinga her — utan det ville modusen dempa nettopp det han skal
+ * framheve.
+ */
+.nattmodus .leaflet-overlay-pane { opacity: 0.3; }
+.nattmodus .leaflet-hinderlys-pane { opacity: 1; }
+.nattmodus .leaflet-marker-pane { opacity: 0.45; }
+.nattmodus .cluster-boble { opacity: 0.5; }
+
+/*
+ * BLINKINGA.
+ *
+ * § 16(3) a. i hindermerkeforskrifta krev at blinkande hinderlys i same
+ * vindpark blinkar SAMTIDIG. Alle lyspunkta deler difor éin animasjon med
+ * same namn og varigheit — nettlesaren startar slike i same fase, så
+ * synkroniseringa fell ut av seg sjølv, utan ein einaste timer i JS.
+ *
+ * Takta er valt innanfor det forskrifta tillèt: 40 blink i minuttet for
+ * høyintensitets type B (som ALLTID blinkar), 30 for mellomintensitet
+ * (som kan vere fast — difor eit rolegare, meir «pustande» uttrykk).
+ */
+.hinderlys {
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
+.hinderlys-raud {
+    animation: hinderlys-puls 2s ease-in-out infinite;
+}
+
+.hinderlys-kvit {
+    animation: hinderlys-blink 1.5s steps(1, end) infinite;
+}
+
+.hinderlys-mellom {
+    animation-duration: 2s;
+    opacity: 0.85;
+}
+
+.hinderlys-uvurdert {
+    opacity: 0.45;
+    filter: none;
+}
+
+@keyframes hinderlys-blink {
+    0%, 22%   { opacity: 1; }
+    23%, 100% { opacity: 0.12; }
+}
+
+@keyframes hinderlys-puls {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+}
+
+/* Blinking er ei kjend migrene-/epilepsiutløysar. Respekter innstillinga. */
+@media (prefers-reduced-motion: reduce) {
+    .hinderlys-raud,
+    .hinderlys-kvit { animation: none; opacity: 1; }
+}
+
+/* ---- Hinderlys i panelet ---- */
+
+.natt-boks {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+.natt-boks.natt-ingen { background: var(--flate-2); color: var(--tekst-svak); border: 1px solid var(--kant); }
+
+.natt-topp { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.natt-etikett { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; }
+.natt-verdi { font-size: 26px; font-weight: 700; line-height: 1; }
+.natt-under { font-size: 13px; margin-top: 4px; opacity: 0.9; }
+.natt-forklaring { font-size: 12.5px; margin: 8px 0 0; line-height: 1.5; opacity: 0.92; }
+.natt-atterhald { font-size: 11.5px; margin: 8px 0 0; line-height: 1.5; opacity: 0.72; }
+.natt-boks.natt-ingen .natt-atterhald { opacity: 1; }
+
+.rad-lys { font-size: 7px; vertical-align: middle; margin-left: 4px; }
+.rad-lys-raud { color: #dc2626; }
+.rad-lys-kvit { color: #94a3b8; }
+.rad-skygge { font-size: 9px; color: var(--gul); margin-left: 4px; }
+
+.rad-eier {
+    display: block;
+    font-size: 11.5px;
+    color: var(--tekst-svak);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lys-liste { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+
+.lys-rad {
+    display: grid;
+    grid-template-columns: 14px 1fr auto;
+    gap: 8px;
+    align-items: start;
+    padding: 6px 8px;
+    border-radius: var(--radius-liten);
+    background: var(--flate-2);
+    font-size: 12.5px;
+}
+
+.lys-prikk { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; }
+.lys-prikk.lys-raud { background: #dc2626; box-shadow: 0 0 5px #dc2626; }
+.lys-prikk.lys-kvit { background: #f8fafc; border: 1px solid var(--kant-sterk); box-shadow: 0 0 5px #cbd5e1; }
+
+.lys-tekst { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.lys-mag { font-style: italic; }
+
+.lys-status { font-size: 11px; padding: 2px 6px; border-radius: 999px; white-space: nowrap; }
+.lys-status.lys-synleg { background: var(--raud-lys); color: #991b1b; font-weight: 600; }
+.lys-status.lys-skjult { background: var(--flate); color: var(--tekst-svakast); }
+.lys-status.lys-ukjent { background: var(--flate); color: var(--tekst-svakast); font-style: italic; }
+
+.lys-grunngjeving { font-size: 12.5px; margin: 4px 0 0; color: var(--tekst-svak); }
+
+.merke-hoyint   { background: #1e293b; color: #f1f5f9; }
+.merke-mellomint { background: var(--raud-lys); color: #991b1b; }
+.merke-estimert-pos { background: #ede9fe; color: #5b21b6; }
+.merke-flytta { background: #7c3aed; color: #fff; }
+
+/* ================================= Brukarjustert turbinposisjon (detalj) */
+
+.justert-boks {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-liten);
+    background: #f5f3ff;
+    border-left: 3px solid #7c3aed;
+}
+.justert-topp {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #5b21b6;
+    font-size: 13px;
+}
+.justert-tekst {
+    margin: 5px 0 8px;
+    font-size: 12.5px;
+    color: var(--tekst-svak);
+    line-height: 1.45;
+}
+.knapp-liten {
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+/* ============================================== Skyggekast */
+
+.skygge-boks {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--kant);
+    background: var(--flate-2);
+}
+
+.skygge-boks.skygge-hoy { background: var(--gul-lys); border-color: #fde047; }
+.skygge-boks.skygge-ingen { color: var(--tekst-svak); }
+
+.skygge-topp { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.skygge-etikett { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--tekst-svak); }
+.skygge-verdi { font-size: 24px; font-weight: 700; line-height: 1; }
+.skygge-eining { font-size: 13px; font-weight: 500; color: var(--tekst-svak); }
+.skygge-under { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; margin-top: 4px; color: var(--tekst-svak); }
+.skygge-terskel { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.skygge-forklaring { font-size: 12px; margin: 8px 0 0; line-height: 1.5; }
+.skygge-atterhald { font-size: 11.5px; margin: 6px 0 0; line-height: 1.5; color: var(--tekst-svak); }
+
+/* =================================================== Skog og bygningar (DOM)
+ *
+ * Kryssjekken mot overflatemodellen (CLAUDE.md §22). Fargespråket er med
+ * vilje eit ANNA enn synlegheitsikona sitt: dette er ikkje ein ny verdi på
+ * same skala, det er ei påminning om at hovudtalet er rekna på bar bakke.
+ * Difor skogsgrønt og eit venstre kantband — same grep som .justert-boks,
+ * som òg seier «dette gjeld noko anna enn resten».
+ */
+
+.knapp.brei { width: 100%; justify-content: center; }
+.knapp-hint { font-size: 11.5px; color: var(--tekst-svak); font-weight: 400; }
+
+.skog-boks {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--kant);
+    background: var(--flate-2);
+}
+
+.skog-boks.skog-tilbod   { background: #f0fdf4; border-color: #bbf7d0; }
+.skog-boks.skog-endrar   { background: #ecfdf5; border-color: #6ee7b7; border-left: 3px solid #047857; }
+.skog-boks.skog-noko     { background: var(--flate-2); border-left: 3px solid #34d399; }
+.skog-boks.skog-ingen    { color: var(--tekst-svak); }
+
+.skog-topp { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.skog-etikett { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: #047857; }
+.skog-boks.skog-ingen .skog-etikett { color: var(--tekst-svak); }
+.skog-verdi { font-size: 24px; font-weight: 700; line-height: 1; color: #047857; }
+.skog-eining { font-size: 13px; font-weight: 500; color: var(--tekst-svak); }
+.skog-under { font-size: 13px; margin-top: 4px; }
+.skog-forklaring { font-size: 12px; margin: 8px 0 0; line-height: 1.5; }
+.skog-atterhald { font-size: 11.5px; margin: 8px 0 0; line-height: 1.5; color: var(--tekst-svak); }
+.skog-boks .knapp { margin-top: 10px; }
+
+/* Merket i turbinlista. */
+.rad-skog { font-size: 9px; color: #16a34a; margin-left: 4px; }
+.rad-skog-skjult { color: #047857; }
+
+/* ---- Detaljvisinga ---- */
+
+.skog-detalj {
+    display: flex;
+    gap: 9px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-liten);
+    background: #f0fdf4;
+    border-left: 3px solid #16a34a;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.skog-detalj > i { margin-top: 2px; color: #16a34a; flex-shrink: 0; }
+.skog-detalj.skog-ventar,
+.skog-detalj.skog-uaktuell { background: var(--flate-2); border-left-color: var(--kant-sterk); color: var(--tekst-svak); }
+.skog-detalj.skog-ventar > i,
+.skog-detalj.skog-uaktuell > i { color: var(--tekst-svakast); }
+.skog-detalj.skog-detalj-skjult { background: #ecfdf5; border-left-color: #047857; }
+
+/* Blokkvarianten (med to rader tal) står ikkje side om side med eit ikon. */
+.skog-detalj.skog-detalj-skjult,
+.skog-detalj.skog-detalj-redusert { display: block; }
+
+.skog-detalj-topp {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.skog-merke {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #047857;
+    font-weight: 600;
+}
+
+.skog-dom { font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.skog-detalj-tekst { margin: 7px 0 0; }
+.skog-detalj-atterhald { margin: 8px 0 0; font-size: 11.5px; color: var(--tekst-svak); }
+
+/* ---- Kalender-varmekart (12 månader × N timar) ---- */
+
+.kalender { margin: 10px 0 4px; }
+.kal-tittel { font-size: 12px; color: var(--tekst-svak); margin-bottom: 6px; }
+.kal-rutenett { display: grid; gap: 2px; }
+
+.kal-rad { display: grid; grid-template-columns: 30px 1fr; gap: 6px; align-items: center; }
+.kal-manad { font-size: 10.5px; color: var(--tekst-svak); text-align: right; }
+.kal-celler { display: grid; grid-template-columns: repeat(var(--kal-kolonnar, 24), 1fr); gap: 2px; }
+
+.kal-celle { height: 11px; border-radius: 2px; background: var(--kant); }
+.kal-n0 { background: var(--flate); border: 1px solid var(--kant); }
+.kal-n1 { background: #fef9c3; }
+.kal-n2 { background: #fde047; }
+.kal-n3 { background: #facc15; }
+.kal-n4 { background: #ea580c; }
+.kal-n5 { background: #b91c1c; }
+
+.kal-akse .kal-celle { background: none; }
+.kal-time { font-size: 9px; color: var(--tekst-svakast); text-align: center; }
+
+.kal-forklaring {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px;
+    font-size: 10.5px; color: var(--tekst-svak); margin-top: 6px;
+}
+.kal-skala { display: inline-flex; align-items: center; gap: 2px; }
+.kal-skala .kal-celle { width: 11px; display: inline-block; }
+.kal-skala em { margin-left: 4px; font-style: normal; }
+
+/* ============================================== Detaljseksjonar */
+
+.detalj-seksjon {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--kant);
+}
+
+.detalj-seksjon h4 {
+    margin: 0 0 6px;
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.detalj-tabell.tett { margin: 6px 0; }
+
+.popup-eier { font-size: 12px; color: var(--tekst-svak); margin-top: 2px; }
+.popup-lys { font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+.popup-lys-raud { color: #dc2626; font-size: 8px; }
+.popup-lys-kvit { color: #64748b; font-size: 8px; }
+
+/* Estimerte turbinpunkt: stipla og gjennomsiktige, tydeleg skilde frå
+   både faktiske NVE-punkt og eittpunkts-plasshaldaren. */
+.turbin-estimert { stroke-dasharray: 2 3; }
+
+/* ============================================== Flyttbare turbinpunkt
+ *
+ * Punkta appen sjølv har plassert (estimert_i_omrade / anlegg_senterpunkt) er
+ * L.marker med divIcon i staden for L.circleMarker, av di berre L.marker kan
+ * dragast. Stilen etterliknar circleMarker-utsjånaden med vilje: symbolet skal
+ * framleis svare på «kor sikker er posisjonen», ikkje på «kva Leaflet-klasse
+ * er dette».
+ *
+ * `cursor: grab` er den einaste faste indikasjonen på at punktet kan flyttast
+ * — resten står i tooltipen. Kombinasjonen er valt fordi eit permanent
+ * flytt-ikon på over tusen markørar ville gjort kartet uleseleg.
+ */
+.turbin-flyttbar {
+    background: none;
+    border: none;
+    cursor: grab;
+    display: grid;
+    place-items: center;
+}
+.turbin-flyttbar:active { cursor: grabbing; }
+
+.tf-prikk {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border: 1.5px dashed currentColor;
+    border-radius: 50%;
+    box-sizing: border-box;
+    opacity: 0.85;
+    transition: transform 0.12s ease;
+}
+.turbin-flyttbar:hover .tf-prikk { transform: scale(1.35); opacity: 1; }
+
+/* Eittpunkts-plasshaldaren: større og heiltrekt ring, som før. */
+.tf-stor {
+    width: 18px;
+    height: 18px;
+    border-width: 3px;
+    border-style: solid;
+}
+
+/* Brukarjustert: fiolett glorie rundt statusfargen. Fargen på sjølve prikken
+   held fram med å bety status — det er OPPHAVET til posisjonen som er nytt,
+   ikkje kva slags sak anlegget er. */
+.tf-justert {
+    box-shadow: 0 0 0 2px #7c3aed, 0 0 6px rgba(124, 58, 237, 0.6);
+    opacity: 1;
+}
+
+.tf-merke {
+    position: absolute;
+    top: -9px;
+    right: -10px;
+    font-size: 8px;
+    color: #7c3aed;
+    background: #fff;
+    border-radius: 50%;
+    padding: 2px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
+}
+
+/* Utheving når turbinen veljast i panelet — motstykket til setStyle() på
+   circleMarker, som divIcon-markørane ikkje har. */
+.turbin-flyttbar.turbin-utheva .tf-prikk {
+    transform: scale(1.6);
+    border-style: solid;
+    opacity: 1;
+    box-shadow: 0 0 0 2px #fff, 0 0 8px rgba(15, 23, 42, 0.5);
+}
+
+/* Tooltip-bakgrunnen er kvit, så hintet må vere mørkt nok til å lesast —
+   ein lys fiolett forsvinn heilt. */
+.tt-drahint { color: #6d28d9; font-style: italic; }
+
+.popup-justert {
+    background: #ede9fe;
+    color: #4c1d95;
+}
+
+/* =================================================== Mobil */
+
+@media (max-width: 900px) {
+    .oppsett { grid-template-columns: 1fr; position: relative; }
+
+    .berre-mobil { display: inline-flex; }
+
+    .knapp span { display: none; }
+
+    .sidepanel {
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 62vh;
+        border-left: none;
+        border-top: 1px solid var(--kant);
+        border-radius: 14px 14px 0 0;
+        box-shadow: 0 -8px 26px rgba(15, 23, 42, 0.18);
+        z-index: 1000;
+        transition: transform 0.3s ease;
+    }
+
+    .sidepanel.skjult { transform: translateY(calc(100% - 8px)); }
+
+    /* Liten "gripekant" som viser at panelet kan skyvast bort */
+    .sidepanel::before {
+        content: '';
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 38px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--kant-sterk);
+    }
+
+    .panel-innhald { padding-top: 18px; }
+
+    /*
+     * Kontrollstabelen på mobil.
+     *
+     * Sidepanelet dekkjer dei nedste 62vh AV VINDAUGET, så kontrollane har
+     * berre stripa mellom toppen av kartet og panelet å gå på — på ein
+     * 390×844-skjerm er det ~115 px, ikkje dei ~305 px ein «38vh» skulle
+     * tilseie. Stabelen var alt høgare enn det med tre grupper (statusfilteret
+     * åleine har sju avkryssingsboksar), og «Hinderlys» som fjerde gruppe låg
+     * dermed heilt under panelet og kunne ikkje trykkjast. Fanga i
+     * nettlesartesten på 390×844.
+     *
+     * `100%` er høgda på .kartomrade, som .kart-kontrollar er posisjonert
+     * inne i. Uttrykket justerer seg difor sjølv når topplinja eller
+     * ansvarsfråskrivinga brekk over fleire liner, i staden for å gjette på
+     * ein fast vh-verdi.
+     */
+    .kart-kontrollar {
+        max-width: 170px;
+        top: 8px;
+        left: 8px;
+        max-height: calc(100% - 62vh - 16px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 4px;
+    }
+
+    /* Skyv panelet bort, og kontrollane får heile kartet. */
+    .panel-skjult .kart-kontrollar { max-height: calc(100% - 16px); }
+
+    .framdrift { bottom: calc(62vh + 12px); }
+
+    /*
+     * Stadfestingsboksen på mobil.
+     *
+     * På desktop er han sentrert med left:50% + translateX(-50%). Det held
+     * ikkje her: boksen vart breiare enn den synlege kartstripa og hamna
+     * dels utanfor skjermkanten, dels oppå kartkontrollane. På smal skjerm
+     * spenner han difor heile breidda med faste marginar i staden.
+     */
+    .stadfest {
+        left: 8px;
+        right: 8px;
+        bottom: calc(62vh + 12px);
+        transform: none;
+        max-width: none;
+    }
+    .stadfest-boks { gap: 10px; padding: 8px 10px; }
+    .stadfest-tekst { flex: 1 1 auto; }
+    /*
+     * Den synlege kartstripa over panelet er berre ~131 px. Hint-linja er
+     * nyttig på desktop, men her ville ho ha dytta boksen opp i
+     * ansvarsfråskrivinga. Koordinatane og knappen er det som må vere med.
+     */
+    .stadfest-hint { display: none; }
+
+    /* Panelet skuva bort → boksen kan bruke heile høgda. */
+    .panel-skjult .stadfest { bottom: 16px; }
+
+    .detalj-panel.open { max-height: 58vh; }
+}
+
+@media (max-width: 560px) {
+    .disclaimer { font-size: 11.5px; padding: 8px 12px; }
+    .nokkeltal { grid-template-columns: repeat(2, 1fr); }
+    .merke h1 { font-size: 14px; }
+}
+
+/* ==========================================================================
+   3D PANORAMA
+   ========================================================================== */
+.panorama {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.panorama.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+.panorama-lerret {
+    position: absolute;
+    inset: 0;
+    cursor: grab;
+}
+.panorama-lerret canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.panorama-lerret:active {
+    cursor: grabbing;
+}
+.panorama-lukk {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+.panorama-lukk:hover {
+    background: rgba(0,0,0,0.8);
+}
+.panorama-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    padding-bottom: 5rem;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    pointer-events: none;
+    z-index: 5;
+}
+.panorama-info-rad {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.25rem;
+}
+.panorama-info-rad strong {
+    font-size: 1.25rem;
+}
+.panorama-info-svak {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+.panorama-sol {
+    font-variant-numeric: tabular-nums;
+}
+/* Kjeldeoppgiving for flyfotoet. Lisenskrav — skal ikkje kunne forsvinne. */
+.panorama-kjelde {
+    white-space: nowrap;
+    padding-left: 0.75rem;
+    opacity: 0.95;
+}
+.panorama-kjelde i {
+    margin-right: 0.3rem;
+    opacity: 0.75;
+}
+/* --------------------------------------------------------------------------
+   Statuslinje for progressiv oppbygging (CLAUDE.md §21).
+
+   Scena opnar på horisonten åleine, og nærfelt og flyfoto kjem etterpå.
+   Linja seier KVA som held på å lande, og ligg like under kompasset —
+   inne i visinga brukaren ser på, ikkje som ein toast bak overlegget.
+   `pointer-events: none` fordi ho aldri skal stå i vegen for ein drag.
+   -------------------------------------------------------------------------- */
+.panorama-status {
+    position: absolute;
+    top: 3.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: min(90%, 30rem);
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(4px);
+    color: white;
+    font-size: 0.82rem;
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    z-index: 10;
+}
+.panorama-status.synleg {
+    opacity: 1;
+    visibility: visible;
+}
+.panorama-kontrollar {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 1rem;
+    z-index: 10;
+    pointer-events: auto;
+}
+.panorama-skyv {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0,0,0,0.5);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+}
+.panorama-skyv label {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.panorama-skyv input[type="range"] {
+    flex: 1;
+}
+.panorama-skyv output {
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 40px;
+    text-align: right;
+}
+.panorama-kompass {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 30px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 15px;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+.panorama-kompass-band {
+    height: 100%;
+    width: 800px;
+    background: repeating-linear-gradient(90deg, transparent 0, transparent 49px, rgba(255,255,255,0.3) 49px, rgba(255,255,255,0.3) 50px);
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+.panorama-kompass-naal {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--primar);
+    transform: translateX(-50%);
+}
+/*
+ * Atterhaldet hadde INGEN regel i det heile. Konsekvensen var ikkje kosmetisk:
+ * `.panorama` er ein flex-kolonne der alle dei andre barna er absolutt
+ * posisjonerte, så avsnittet låg i normalflyten øvst — og fordi det er eit
+ * uposisjonert element, vart det måla UNDER det absolutt posisjonerte
+ * lerretet. Teksten fanst i DOM-en, men var usynleg på skjermen.
+ *
+ * Det er mest kritisk no som bakken er ekte flyfoto: eit foto ser langt meir
+ * autoritativt ut enn ei fargeflate, så nettopp her MÅ det stå kva biletet
+ * ikkje er.
+ */
+.panorama-atterhald {
+    position: absolute;
+    top: 4.5rem;
+    left: 1rem;
+    max-width: 24rem;
+    margin: 0;
+    padding: 0.6rem 0.8rem;
+    display: flex;
+    gap: 0.55rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.88);
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+    z-index: 6;
+}
+.panorama-atterhald i {
+    margin-top: 0.15rem;
+    color: #fbbf24;
+}
+@media (max-width: 700px) {
+    .panorama-atterhald {
+        max-width: none;
+        right: 1rem;
+        font-size: 0.7rem;
+    }
+}
+.panorama-turbin-namn {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    color: white;
+    font-size: 0.75rem;
+    background: rgba(0,0,0,0.6);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.2);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 2;
+}

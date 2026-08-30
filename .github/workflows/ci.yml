@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP-oppsett
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: php -l på all PHP
+        run: |
+          fail=0
+          while IFS= read -r -d '' f; do
+            php -l "$f" || fail=1
+          done < <(find . -name '*.php' -not -path './node_modules/*' -print0)
+          exit $fail
+
+      - name: node --check på all JS
+        run: |
+          fail=0
+          for f in $(find js tools -type f \( -name '*.js' -o -name '*.mjs' \)); do
+            node --check "$f" || fail=1
+          done
+          exit $fail
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bygg Docker-biletet
+        run: docker build -t vindkraft-ci .
+
+      - name: Røyktest — server, header og tilgangskontroll
+        run: |
+          docker run -d --name vind -p 8011:8011 vindkraft-ci
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8011/ && break
+            sleep 2
+          done
+
+          echo "--- / skal svare 200 og innehalde CSP ---"
+          curl -si http://localhost:8011/ | tee /tmp/root.txt | head -1 | grep -q '200'
+          grep -qi 'content-security-policy' /tmp/root.txt
+          grep -qi "connect-src 'self'" /tmp/root.txt
+
+          echo "--- interne stiar og sensitive filtypar skal svare 403 ---"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8011/tools/verify_model.mjs)" = 403
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8011/scripts/dev.sh)" = 403
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8011/logs/error.log)" = 403
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8011/cache/elevation/.gitkeep)" = 403
+
+          docker logs vind | tail -20
+          docker rm -f vind

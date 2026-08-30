@@ -1,0 +1,100 @@
+name: Release
+
+# Byggjer sjølvstendige nedlastbare utgåver (FrankenPHP-binær + appen) for
+# Linux, macOS og Windows, og heng dei på GitHub-releasen.
+#
+# Utløysar: push av ein tag som byrjar på «v», t.d.
+#   git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  # Kan pinnast til ein konkret versjon (t.d. «1.9.0») for reproduserbare
+  # byggjer. «latest» følgjer nyaste FrankenPHP-utgåve.
+  FRANKENPHP_VERSION: latest
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            asset: frankenphp-linux-x86_64
+            bin: frankenphp
+            archive: tar.gz
+          - name: linux-arm64
+            asset: frankenphp-linux-aarch64
+            bin: frankenphp
+            archive: tar.gz
+          - name: mac-arm64
+            asset: frankenphp-mac-arm64
+            bin: frankenphp
+            archive: tar.gz
+          - name: windows-x86_64
+            asset: frankenphp-windows-x86_64.exe
+            bin: frankenphp.exe
+            archive: zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Last ned FrankenPHP-binær (${{ matrix.name }})
+        run: |
+          set -eux
+          if [ "${FRANKENPHP_VERSION}" = "latest" ]; then
+            base="https://github.com/php/frankenphp/releases/latest/download"
+          else
+            base="https://github.com/php/frankenphp/releases/download/v${FRANKENPHP_VERSION}"
+          fi
+          curl -fSL --retry 3 -o "${{ matrix.bin }}" "${base}/${{ matrix.asset }}"
+          chmod +x "${{ matrix.bin }}"
+
+      - name: Sett saman pakka
+        run: |
+          set -eux
+          dir="vindkraft-paavirkning-${{ matrix.name }}"
+          mkdir -p "$dir"
+
+          # Appen
+          cp -r index.html favicon.ico css js assets backend cron Caddyfile LICENSE "$dir/"
+
+          # Tomme, skrivbare arbeidsmapper
+          mkdir -p "$dir/cache/elevation" "$dir/cache/ratelimit" "$dir/logs"
+          touch "$dir/cache/elevation/.gitkeep" "$dir/cache/ratelimit/.gitkeep"
+
+          # Binær + startarar
+          mv "${{ matrix.bin }}" "$dir/"
+          cp scripts/dist/LES-MEG.txt "$dir/"
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            cp scripts/dist/start.bat "$dir/"
+          else
+            cp scripts/dist/start.sh "$dir/"
+            chmod +x "$dir/start.sh"
+            # .command er dobbeltklikkbar i macOS Finder
+            cp scripts/dist/start.sh "$dir/start.command"
+            chmod +x "$dir/start.command"
+          fi
+
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            zip -r "${dir}.zip" "$dir"
+          else
+            tar -czf "${dir}.tar.gz" "$dir"
+          fi
+          ls -la vindkraft-paavirkning-*
+
+      - name: Heng på releasen
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            vindkraft-paavirkning-${{ matrix.name }}.tar.gz
+            vindkraft-paavirkning-${{ matrix.name }}.zip
+          fail_on_unmatched_files: false
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
