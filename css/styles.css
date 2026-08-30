@@ -624,6 +624,40 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .samandrag-detaljar dt { color: var(--tekst-svak); }
 .samandrag-detaljar dd { margin: 0; }
 
+/* ---- Knapperader i samandraget (3D/foto + del/eksport) ---- */
+.visualknappar,
+.del-eksporter { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.del-eksporter { margin-top: 8px; }
+
+/* ---- Samanleggbare fagbolkar (hinderlys, skyggekast) ---- *
+ * <details>/<summary>: topplinja med etikett + nøkkeltal er alltid synleg
+ * og fungerer som brytar; forklaringane under er kollapsa som standard. */
+.sam-fald > summary {
+    cursor: pointer;
+    list-style: none;
+    justify-content: flex-start;
+    gap: 8px;
+}
+.sam-fald > summary::-webkit-details-marker { display: none; }
+.sam-fald > summary > .natt-verdi,
+.sam-fald > summary > .skygge-verdi { margin-left: auto; }
+.sam-fald > summary:focus-visible {
+    outline: 2px solid var(--primaer);
+    outline-offset: 2px;
+    border-radius: var(--radius-liten);
+}
+.sam-fald-pil {
+    font-size: 10px;
+    align-self: center;
+    opacity: 0.6;
+    transition: transform 0.15s;
+}
+.sam-fald[open] .sam-fald-pil { transform: rotate(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+    .sam-fald-pil { transition: none; }
+}
+
 /* =================================================== Støyboks */
 
 .stoy-boks {

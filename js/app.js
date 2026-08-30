@@ -58,6 +58,10 @@ class VindApp {
             paaFotomontasje: () => this.visFotomontasje(),
             paaTilbakestillPosisjon: (id) => this.tilbakestillTurbinPosisjon(id),
             paaSjekkOverflate: () => this.kjoerOverflatesjekk(),
+            // Flytta hit frå topplinja: dei gir berre meining med eit resultat.
+            paaDelLenke: () => this.delLenke(),
+            paaEksporterAnalyse: () => this.eksporterAnalyserteKml(),
+            paaRapport: () => this.skrivUt(),
         });
         this.fotomontasje = new Fotomontasje();
 
@@ -381,14 +385,6 @@ class VindApp {
                     this.kart.zoomTilRadius();
                     break;
 
-                case 'del-lenke':
-                    this.delLenke();
-                    break;
-
-                case 'eksporter-analyserte':
-                    this.eksporterAnalyserteKml();
-                    break;
-
                 case 'eksporter-alle':
                     this.eksporterAlleKml();
                     break;
@@ -401,9 +397,9 @@ class VindApp {
                     this._oppdaterTurbindataFraKnapp(el);
                     break;
 
-                case 'skriv-ut':
-                    this.skrivUt();
-                    break;
+                // «del-lenke», «eksporter-analyserte» og «skriv-ut» bur no i
+                // sidepanelet (ImpactPanel `_delEksporterHtml`) — dei gir berre
+                // meining med eit analysert punkt. Panelet har sin eigen lyttar.
 
                 case 'veksle-synlegheitskart':
                     this.vekslSynlegheitskart(el);

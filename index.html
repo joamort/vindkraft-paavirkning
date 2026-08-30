@@ -34,26 +34,27 @@
         <ul id="adresse-treff" class="adresse-treff" role="listbox" hidden></ul>
     </div>
 
+    <!--
+      Berre GLOBALE verktøy her. Handlingar som fyrst gir meining når eit punkt
+      er analysert — del lenke, eksporter analysen, PDF-rapport — bur i
+      sidepanelet ved sida av «Vis 3D-panorama», og dukkar opp der når det finst
+      eit resultat. Sjå ImpactPanel `_delEksporterHtml`.
+    -->
     <div class="topplinje-verktoy">
-        <button type="button" class="knapp" data-action="min-posisjon">
+        <button type="button" class="knapp" data-action="min-posisjon"
+                title="Finn og bruk di eiga posisjon (GPS)">
             <i class="fa-solid fa-location-crosshairs"></i><span>Min posisjon</span>
         </button>
-        <button type="button" class="knapp" data-action="del-lenke">
-            <i class="fa-solid fa-share-nodes"></i><span>Del</span>
+        <button type="button" class="knapp" data-action="eksporter-alle"
+                title="Last ned heile (statusfiltrerte) turbindatasettet som KML — uavhengig av analyse">
+            <i class="fa-solid fa-earth-europe"></i><span>Alle turbinar (KML)</span>
         </button>
-        <button type="button" class="knapp" data-action="eksporter-analyserte" title="Eksporter dei analyserte turbinane som KML">
-            <i class="fa-solid fa-file-export"></i><span>Eksporter analyse (KML)</span>
-        </button>
-        <button type="button" class="knapp" data-action="eksporter-alle" title="Last ned heile (filtrerte) turbindatasettet som KML">
-            <i class="fa-solid fa-globe"></i><span>Eksporter alle (KML)</span>
-        </button>
-        <button type="button" class="knapp" data-action="skriv-ut" title="Éin-sides rapport for punktet (skriv ut eller lagre som PDF)">
-            <i class="fa-solid fa-file-pdf"></i><span>Rapport (PDF)</span>
-        </button>
-        <button type="button" class="knapp" data-action="veksle-info">
+        <button type="button" class="knapp" data-action="veksle-info"
+                title="Kva modellen kan og ikkje kan">
             <i class="fa-solid fa-circle-info"></i><span>Om modellen</span>
         </button>
-        <button type="button" class="knapp berre-mobil" data-action="veksle-panel" aria-label="Vis/skjul panel">
+        <button type="button" class="knapp berre-mobil" data-action="veksle-panel"
+                aria-label="Vis/skjul panel" title="Vis/skjul panelet">
             <i class="fa-solid fa-bars"></i>
         </button>
     </div>

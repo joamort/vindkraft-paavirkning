@@ -153,14 +153,15 @@ export class ImpactPanel {
                 case 'sjekk-overflate':
                     this.handlingar.paaSjekkOverflate?.();
                     break;
-                case 'veksle-seksjon': {
-                    const maal = document.getElementById(el.dataset.maal);
-                    if (maal) {
-                        const open = maal.classList.toggle('open');
-                        el.setAttribute('aria-expanded', String(open));
-                    }
+                case 'del-lenke':
+                    this.handlingar.paaDelLenke?.();
                     break;
-                }
+                case 'eksporter-analyserte':
+                    this.handlingar.paaEksporterAnalyse?.();
+                    break;
+                case 'skriv-ut':
+                    this.handlingar.paaRapport?.();
+                    break;
                 default:
                     break;
             }
@@ -174,7 +175,7 @@ export class ImpactPanel {
         if (!el) return;
         el.innerHTML = `
             <div class="tomtilstand">
-                <i class="fa-solid fa-location-crosshairs"></i>
+                <i class="fa-solid fa-hand-pointer"></i>
                 <h2>Vel eit punkt</h2>
                 <p>Klikk i kartet der du vil vurdere påverknaden — til dømes på bustaden din.
                    Trykk så <strong>«Analyser her»</strong>. Appen finn då alle vindturbinar i
@@ -402,12 +403,42 @@ export class ImpactPanel {
                 <div class="visualknappar">
                     ${panoramaKoyrer
                         ? `<button type="button" class="knapp brei" data-action="vis-panorama" disabled><i class="fa-solid fa-spinner fa-spin"></i> Byggjer 3D-panorama …</button>`
-                        : `<button type="button" class="knapp brei" data-action="vis-panorama"><i class="fa-solid fa-vr-cardboard"></i> Vis 3D-panorama</button>`}
-                    <button type="button" class="knapp brei" data-action="fotomontasje"><i class="fa-solid fa-image"></i> Fotomontasje</button>
+                        : `<button type="button" class="knapp brei" data-action="vis-panorama"><i class="fa-solid fa-panorama"></i> Vis 3D-panorama</button>`}
+                    <button type="button" class="knapp brei" data-action="fotomontasje"><i class="fa-solid fa-images"></i> Fotomontasje</button>
                 </div>
+                ${this._delEksporterHtml(resultat)}
                 ${naerskjermingVarsel}
                 ${avkortaVarsel}
             </section>`;
+    }
+
+    /**
+     * DEL OG EKSPORTER — flytta hit frå topplinja.
+     *
+     * Desse tre handlingane gir berre meining når det finst eit analysert
+     * punkt, og «Del punkt» krev berre punktet medan dei to andre krev eit
+     * turbinresultat. Dei låg før alltid synlege i topplinja og svarte med
+     * ein toast om dei vart trykte for tidleg; her dukkar dei opp når dei
+     * faktisk kan brukast, ved sida av 3D-panorama/fotomontasje.
+     */
+    _delEksporterHtml(resultat) {
+        const harResultat = resultat.length > 0;
+        return `
+            <div class="del-eksporter">
+                <button type="button" class="knapp brei" data-action="del-lenke"
+                        title="Kopier ei delbar lenke til dette punktet">
+                    <i class="fa-solid fa-link"></i> Del punkt
+                </button>
+                ${harResultat ? `
+                <button type="button" class="knapp brei" data-action="eksporter-analyserte"
+                        title="Last ned dei analyserte turbinane med siktlinjer som KML (Google Earth)">
+                    <i class="fa-solid fa-file-export"></i> Eksporter analyse (KML)
+                </button>
+                <button type="button" class="knapp brei" data-action="skriv-ut"
+                        title="Éin-sides rapport for punktet — skriv ut eller lagre som PDF">
+                    <i class="fa-solid fa-file-pdf"></i> Rapport (PDF)
+                </button>` : ''}
+            </div>`;
     }
 
     /**
@@ -559,11 +590,12 @@ export class ImpactPanel {
         const ingen = hl.lyspunktSynlege === 0;
 
         return `
-            <div class="natt-boks ${ingen ? 'natt-ingen' : ''}">
-                <div class="natt-topp">
+            <details class="natt-boks sam-fald ${ingen ? 'natt-ingen' : ''}">
+                <summary class="natt-topp">
                     <span class="natt-etikett"><i class="fa-solid fa-moon"></i> Hinderlys om natta</span>
                     <span class="natt-verdi">${hl.lyspunktSynlege}</span>
-                </div>
+                    <i class="fa-solid fa-chevron-down sam-fald-pil"></i>
+                </summary>
                 <div class="natt-under">
                     ${ingen
                         ? 'Ingen av dei påbodne hinderlysa er synlege frå dette punktet.'
@@ -589,7 +621,7 @@ export class ImpactPanel {
                     turbinane i <strong>ytterkanten</strong> vert merkte. NVE-datasettet seier ingenting om
                     kva anlegg dette gjeld, så biletet her er eit <strong>maksimum</strong>.
                 </p>
-            </div>`;
+            </details>`;
     }
 
     /**
@@ -604,16 +636,17 @@ export class ImpactPanel {
 
         if (sk.turbinarMedSkygge === 0) {
             return `
-                <div class="skygge-boks skygge-ingen">
-                    <div class="skygge-topp">
+                <details class="skygge-boks sam-fald skygge-ingen">
+                    <summary class="skygge-topp">
                         <span class="skygge-etikett"><i class="fa-solid fa-sun"></i> Skyggekast</span>
                         <span class="skygge-verdi">0</span>
-                    </div>
+                        <i class="fa-solid fa-chevron-down sam-fald-pil"></i>
+                    </summary>
                     <div class="skygge-under">
                         Ingen av dei ${sk.turbinarVurderte} turbinane innanfor skyggekast-avstand
                         kan geometrisk kaste rotorskugge på dette punktet.
                     </div>
-                </div>`;
+                </details>`;
         }
 
         const K = CONFIG.skyggekast;
@@ -622,11 +655,12 @@ export class ImpactPanel {
         const klasse = (overAar || overDag) ? 'skygge-hoy' : 'skygge-lav';
 
         return `
-            <div class="skygge-boks ${klasse}">
-                <div class="skygge-topp">
+            <details class="skygge-boks sam-fald ${klasse}">
+                <summary class="skygge-topp">
                     <span class="skygge-etikett"><i class="fa-solid fa-sun"></i> Skyggekast (teoretisk)</span>
                     <span class="skygge-verdi">${fmtTimar(sk.timarPerAar)}<span class="skygge-eining">/år</span></span>
-                </div>
+                    <i class="fa-solid fa-chevron-down sam-fald-pil"></i>
+                </summary>
                 <div class="skygge-under">
                     <span>Verste dag: <strong>${Math.round(sk.maksMinuttPerDag)} min</strong></span>
                     <span>${sk.dagarMedSkygge} dagar i året</span>
@@ -655,7 +689,7 @@ export class ImpactPanel {
                     Same forhold på talet over gir grovt <strong>~${fmtTimar(sk.illustrativtFaktiskTimarPerAar)}/år</strong>,
                     men det er ei illustrasjon, ikkje ein prognose: det krev sky- og vindstatistikk me ikkje har.
                 </p>
-            </div>`;
+            </details>`;
     }
 
     /**
@@ -1149,11 +1183,9 @@ export class ImpactPanel {
 
     /**
      * Kva forskrifta krev av hinderlys på nettopp denne turbinen, og kva av
-     * det som er synleg herfrå.
-     *
-     * Seksjonen er samanleggbar (`veksle-seksjon`), fordi han er interessant
-     * for nokre og støy for andre — men han står ALLTID der når turbinen er
-     * merkepliktig, slik at ingen kan gå glipp av at det finst lys i det heile.
+     * det som er synleg herfrå. Står ALLTID der når turbinen er merkepliktig,
+     * slik at ingen kan gå glipp av at det finst lys i det heile. (Samandraget
+     * sin hinderlys-bolk er derimot samanleggbar — sjå `_hinderlysSamandragHtml`.)
      */
     _hinderlysDetaljHtml(r) {
         const hl = r.hinderlys;
