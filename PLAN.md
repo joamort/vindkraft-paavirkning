@@ -572,9 +572,10 @@ vind/
 | **3 — Visualisering** | Høgdeprofil-graf per turbin (Chart.js), visuell dominans-kategori (§4.2) |
 | **4a — Nattbilete, sol og plassering** | Eigar-etikett, hinderlys + nattmodus (§4.4), skyggekast (§4.5), estimert turbinutplassering i planområde (§4.6), brukarjustering av dei estimerte posisjonane (§4.6b), stadfesting før analyse (§4.7) |
 | **4c — 3D-panorama** | Three.js-panorama med analytisk klipping (§4.8), ekte ortofoto drapert over terrenget (§4.8), asimutal nærfelt-fortetting av meshen (§4.9), progressiv oppbygging av scena (§4.10) |
-| **4d — Skog og bygningar** | DOM-kryssjekk i det kritiske siktlinjepunktet (§4.11) — den fyrste konkrete motvekta mot bar-bakke-avgrensinga i §7 |
-| **4b — Finpuss** | Adressesøk, PWA/offline for turbinlaget, skjermbilete-eksport. Delbar lenke er alt på plass |
-| **5 — Utviding (valfri)** | Nærare ISO 9613-2-modell, per-turbinmodell lydeffektdata, "kva om"-scenario for turbinstørrelse på planlagde anlegg, *faktisk* skyggekast med skydekke-/vindstatistikk, vindrose i utplasseringsheuristikken |
+| **4d — Skog og bygningar** | DOM-kryssjekk i det kritiske siktlinjepunktet (§4.11), topp-K i staden for topp-1 (CLAUDE.md §23), panoramaets skogbrytar (§24) |
+| **4b — Finpuss** | ✔ Adressesøk (CLAUDE.md §26), ✔ éin-sides PDF-rapport (§28), ✔ kumulativ horisontbelastning (§27), ✔ lokalt synlegheitskart / ZVI (§29), ✔ fotomontasje (§30). Att: PWA/offline for turbinlaget, rå skjermbilete-eksport |
+| **4e — Sjølvhosting** | ✔ FrankenPHP-binærar + Docker, release-on-tag (CLAUDE.md §25), ✔ diskré versjonssjekk + «oppdater turbindata» (§31). Repoet er offentleg (MIT), CONTRIBUTING.md på plass |
+| **5 — Utviding (valfri)** | Nærare ISO 9613-2-modell, per-turbinmodell lydeffektdata, "kva om"-scenario for turbinstørrelse på planlagde anlegg, *faktisk* skyggekast med skydekke-/vindstatistikk, vindrose i utplasseringsheuristikken, vindretnings-avhengig støy + støykonturar på kartet, 2-punkts-kalibrering for fotomontasjen |
 
 ---
 
