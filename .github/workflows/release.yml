@@ -1,7 +1,7 @@
 name: Release
 
-# Byggjer sjølvstendige nedlastbare utgåver (FrankenPHP-binær + appen) for
-# Linux, macOS og Windows, og heng dei på GitHub-releasen.
+# Byggjer sjølvstendige nedlastbare utgåver (FrankenPHP + appen) for Linux,
+# macOS og Windows, og heng dei på GitHub-releasen.
 #
 # Utløysar: push av ein tag som byrjar på «v», t.d.
 #   git tag v0.1.0 && git push origin v0.1.0
@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 env:
-  # Kan pinnast til ein konkret versjon (t.d. «1.9.0») for reproduserbare
+  # Kan pinnast til ein konkret versjon (t.d. «1.12.7») for reproduserbare
   # byggjer. «latest» følgjer nyaste FrankenPHP-utgåve.
   FRANKENPHP_VERSION: latest
 
@@ -27,25 +27,25 @@ jobs:
         include:
           - name: linux-x86_64
             asset: frankenphp-linux-x86_64
-            bin: frankenphp
+            kind: static
             archive: tar.gz
           - name: linux-arm64
             asset: frankenphp-linux-aarch64
-            bin: frankenphp
+            kind: static
             archive: tar.gz
           - name: mac-arm64
             asset: frankenphp-mac-arm64
-            bin: frankenphp
+            kind: static
             archive: tar.gz
           - name: windows-x86_64
-            asset: frankenphp-windows-x86_64.exe
-            bin: frankenphp.exe
+            asset: frankenphp-windows-x86_64.zip
+            kind: windows-zip
             archive: zip
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Last ned FrankenPHP-binær (${{ matrix.name }})
+      - name: Last ned FrankenPHP (${{ matrix.name }})
         run: |
           set -eux
           if [ "${FRANKENPHP_VERSION}" = "latest" ]; then
@@ -53,8 +53,7 @@ jobs:
           else
             base="https://github.com/php/frankenphp/releases/download/v${FRANKENPHP_VERSION}"
           fi
-          curl -fSL --retry 3 -o "${{ matrix.bin }}" "${base}/${{ matrix.asset }}"
-          chmod +x "${{ matrix.bin }}"
+          curl -fSL --retry 3 -o fp-download "${base}/${{ matrix.asset }}"
 
       - name: Sett saman pakka
         run: |
@@ -62,32 +61,40 @@ jobs:
           dir="vindkraft-paavirkning-${{ matrix.name }}"
           mkdir -p "$dir"
 
-          # Appen
-          cp -r index.html favicon.ico css js assets backend cron Caddyfile LICENSE "$dir/"
+          # --- FrankenPHP ---
+          case "${{ matrix.kind }}" in
+            static)
+              mv fp-download "$dir/frankenphp"
+              chmod +x "$dir/frankenphp"
+              ;;
+            windows-zip)
+              # frankenphp.exe + berre DLL-ane på toppnivå (curl, mbstring, dom,
+              # simplexml er kompilerte inn — ext/, dev/, lib/, extras/ trengst
+              # ikkje).
+              mkdir fpwin && unzip -q fp-download -d fpwin \
+                -x 'ext/*' 'dev/*' 'lib/*' 'extras/*'
+              cp fpwin/frankenphp.exe "$dir/"
+              cp fpwin/*.dll "$dir/"
+              ;;
+          esac
 
-          # Tomme, skrivbare arbeidsmapper
+          # --- Appen ---
+          cp -r index.html favicon.ico css js assets backend cron Caddyfile LICENSE "$dir/"
           mkdir -p "$dir/cache/elevation" "$dir/cache/ratelimit" "$dir/logs"
           touch "$dir/cache/elevation/.gitkeep" "$dir/cache/ratelimit/.gitkeep"
 
-          # Binær + startarar
-          mv "${{ matrix.bin }}" "$dir/"
+          # --- Startarar ---
           cp scripts/dist/LES-MEG.txt "$dir/"
           if [ "${{ matrix.archive }}" = "zip" ]; then
             cp scripts/dist/start.bat "$dir/"
+            zip -qr "${dir}.zip" "$dir"
           else
-            cp scripts/dist/start.sh "$dir/"
-            chmod +x "$dir/start.sh"
-            # .command er dobbeltklikkbar i macOS Finder
-            cp scripts/dist/start.sh "$dir/start.command"
-            chmod +x "$dir/start.command"
-          fi
-
-          if [ "${{ matrix.archive }}" = "zip" ]; then
-            zip -r "${dir}.zip" "$dir"
-          else
+            cp scripts/dist/start.sh "$dir/start.sh"
+            cp scripts/dist/start.sh "$dir/start.command"  # dobbeltklikkbar i macOS Finder
+            chmod +x "$dir/start.sh" "$dir/start.command"
             tar -czf "${dir}.tar.gz" "$dir"
           fi
-          ls -la vindkraft-paavirkning-*
+          ls -la vindkraft-paavirkning-*.*
 
       - name: Heng på releasen
         uses: softprops/action-gh-release@v2

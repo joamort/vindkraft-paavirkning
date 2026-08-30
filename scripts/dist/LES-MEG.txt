@@ -39,11 +39,16 @@ KVA LIGG I MAPPA
 ----------------
 
   frankenphp(.exe)   Webtenaren (PHP innebygd). Ingen installasjon.
+  *.dll              (berre Windows) køyretidsbibliotek for frankenphp.exe.
   Caddyfile          Tenar-konfigurasjon (tryggingsheader, tilgangskontroll).
   index.html, css/, js/, assets/, favicon.ico
   backend/, cron/    PHP-koden som hentar og reknar.
   cache/             Vert fylt ved bruk. Trygt å slette for å byrje på nytt.
   logs/              Feillogg. Ingen koordinatar vert logga.
+
+Windows: får du feilmelding om at «VCRUNTIME140.dll manglar», installer
+Microsoft Visual C++ Redistributable (x64) frå microsoft.com og prøv igjen.
+Dei fleste Windows 10/11-maskiner har han alt.
 
 
 OPPDATERE TURBINDATA
