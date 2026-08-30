@@ -136,6 +136,16 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 
 .berre-mobil { display: none; }
 
+/* Utgåve-id ved overskrifta — berre synleg i nedlastbare utgåver. */
+.app-versjon {
+    font-size: 0.58em;
+    font-weight: 400;
+    color: var(--tekst-svakast);
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+}
+.app-versjon:empty { display: none; }
+
 /* =================================================== Disclaimer */
 
 .disclaimer {

@@ -171,6 +171,13 @@ class VindApp {
 
         try {
             const v = await sjekkVersjon();
+
+            // Vis utgåve-id-en ved overskrifta. Berre nedlastbare utgåver har
+            // ein (version.json) — web/kjeldekode får tom streng, altså inga
+            // vising.
+            const vEl = $('app-versjon');
+            if (vEl) vEl.textContent = v?.naavaerande ?? '';
+
             if (v?.nyare && v.siste) {
                 const url = escHtml(v.url || 'https://github.com/joamort/vindkraft-paavirkning/releases/latest');
                 rader.push(
