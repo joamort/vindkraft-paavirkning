@@ -20,7 +20,8 @@ RUN set -eux; \
 	chmod +x /app/scripts/docker-entrypoint.sh
 
 # Lytt på alle grensesnitt inne i containeren; port vert mappa i compose.
-ENV VIND_ADDR="http://0.0.0.0:8011" \
+ENV VIND_BIND="0.0.0.0" \
+	VIND_PORT="8011" \
 	VIND_ROOT="/app"
 
 EXPOSE 8011

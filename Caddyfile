@@ -7,7 +7,8 @@
 # fila i synk, oppfører alle tre køyremåtane seg likt.
 #
 # Miljøvariablar:
-#   VIND_ADDR  — lytteadresse (default http://localhost:8011; Docker set 0.0.0.0)
+#   VIND_PORT  — port (default 8011)
+#   VIND_BIND  — nettverksgrensesnitt (default berre loopback; Docker set 0.0.0.0)
 #   VIND_ROOT  — rotmappe for appen (default gjeldande mappe)
 {
 	frankenphp
@@ -16,7 +17,11 @@
 	persist_config off
 }
 
-{$VIND_ADDR:http://localhost:8011} {
+# Port-berre adresse: matchar alle Host-verdiar. Sokkelen vert styrt av
+# «bind» under — IKKJE av ei IP i adressa her (då ville «0.0.0.0» blitt ein
+# Host-matchar og alle requests mot «localhost» ville falle utanfor).
+:{$VIND_PORT:8011} {
+	bind {$VIND_BIND:127.0.0.1 ::1}
 	root * {$VIND_ROOT:.}
 	encode zstd gzip
 

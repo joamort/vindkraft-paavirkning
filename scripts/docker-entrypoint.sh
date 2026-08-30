@@ -17,5 +17,5 @@ if [ ! -f cache/turbines.json ] && [ -z "$VIND_SKIP_CACHE_BUILD" ]; then
 	fi
 fi
 
-echo "→ Startar FrankenPHP på ${VIND_ADDR:-http://0.0.0.0:8011}"
+echo "→ Startar FrankenPHP (bind ${VIND_BIND:-0.0.0.0}:${VIND_PORT:-8011})"
 exec frankenphp run --config /app/Caddyfile
