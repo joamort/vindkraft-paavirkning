@@ -10,6 +10,10 @@ teoretisk skyggekast, hinderlys, og eit 3D-panorama med flyfoto.
 Arkitektur, datakjelder og modellval: **[PLAN.md](PLAN.md)** og
 **[CLAUDE.md](CLAUDE.md)**.
 
+![Skjermbilete: analyse frå eit punkt ved Smøla vindkraftverk — 68 av 68
+turbinar synlege, med siktlinjer teikna frå punktet til kvar turbin, og
+sidepanel med støy-, skog- og hinderlys-estimat.](docs/skjermbilde.png)
+
 ---
 
 ## Køyr appen
@@ -115,6 +119,14 @@ Slett `cache/turbines.json` og start på nytt — eller køyr
 - `Caddyfile` er den tilsvarande konfigurasjonen for FrankenPHP (utgåvene i
   (1) og Docker i (2)) — same tryggingsheader, CSP og tilgangskontroll.
   Endrar du den eine, hald den andre i synk.
+
+---
+
+## Bidra
+
+Pull requests er velkomne. Sjå **[CONTRIBUTING.md](CONTRIBUTING.md)** for
+lokalt oppsett, testkøyring og kodekonvensjonar. «TODO / neste fasar» nederst
+i `CLAUDE.md` er ei liste over konkrete oppgåver.
 
 ---
 
