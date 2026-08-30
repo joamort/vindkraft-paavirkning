@@ -17,6 +17,8 @@ if not exist "frankenphp.exe" (
 
 if not exist "cache\turbines.json" (
 	echo   Byggjer turbindata ^(~10 s, berre fyrste gong, hentar fraa NVE^)...
+	echo   ^(utan nett kan dette bruke eit par minutt paa aa gi opp - appen
+	echo   opnar likevel, og du kan starte paa nytt seinare^)
 	frankenphp.exe php-cli cron\fetch_turbines.php
 )
 

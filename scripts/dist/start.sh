@@ -18,8 +18,18 @@ fi
 
 if [ ! -f cache/turbines.json ]; then
 	echo "→ Byggjer turbindata (~10 s, berre fyrste gong, hentar frå NVE)…"
-	"$BIN" php-cli cron/fetch_turbines.php || \
-		echo "⚠  Klarte ikkje byggje turbindata no. Sjekk nettet og prøv igjen."
+	"$BIN" php-cli cron/fetch_turbines.php &
+	fetch_pid=$!
+	i=0
+	while kill -0 "$fetch_pid" 2>/dev/null && [ "$i" -lt 75 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	if kill -0 "$fetch_pid" 2>/dev/null; then
+		echo "⚠  Turbindata tek uventa lang tid (er du på nett?). Serveren startar"
+		echo "   no — hentinga held fram i bakgrunnen. Last sida på nytt når ho"
+		echo "   er ferdig, eller start på nytt seinare."
+	fi
 fi
 
 URL="http://localhost:8011"
