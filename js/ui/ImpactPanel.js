@@ -291,6 +291,20 @@ export class ImpactPanel {
         `;
     }
 
+    /**
+     * Kor stor del av synsranda turbinane opptek, og kor mange separate anlegg
+     * — SNH-guiden legg vekt på begge. Union av synsvinklane, ikkje sum
+     * (kumulativHorisont() i ImpactCalculator).
+     */
+    _horisontbelastningHtml(kh) {
+        if (!kh || kh.gradar <= 0) return '';
+        const R = ['nord', 'nordaust', 'aust', 'søraust', 'sør', 'sørvest', 'vest', 'nordvest'];
+        const retning = kh.midtKurs == null ? '' : ` mot ${R[Math.round(kh.midtKurs / 45) % 8]}`;
+        const anlegg = kh.anlegg > 1 ? ` · ${kh.anlegg} anlegg` : '';
+        return `<dt>Horisontbelastning</dt>
+                <dd>Turbinane fyller <strong>${kh.gradar}°</strong> av synsranda${retning}${anlegg}</dd>`;
+    }
+
     _samandragHtml({ punkt, samandrag, samlaStoy, avkorta, radiusM, resultat, overflateKoyrer, panoramaKoyrer }) {
         const s = samandrag;
         const stoyKat = stoykategori(samlaStoy?.ldenDb ?? null);
@@ -359,6 +373,7 @@ export class ImpactPanel {
                         ? `${escHtml(s.mestDominerande.navn)} — ${escHtml(s.mestDominerande.dominans.tekst.toLowerCase())}
                            (${s.mestDominerande.dominans.synsvinkelGrader.toFixed(1)}° synsvinkel)`
                         : 'Ingen synlege turbinar'}</dd>
+                    ${this._horisontbelastningHtml(s.kumulativHorisont)}
                 </dl>
 
                 <div class="stoy-boks ${stoyKat.klasse}">

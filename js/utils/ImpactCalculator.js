@@ -328,6 +328,68 @@ export function beregnPaaverknad({ punkt, turbin, profil }) {
 }
 
 /**
+ * KUMULATIV HORISONTBELASTNING.
+ *
+ * SNH («Visual Representation of Wind Farms») og norsk forvaltningspraksis
+ * vektlegg to ting som ikkje kjem fram av «N synlege turbinar»: kor stor del
+ * av den horisontale synsranda turbinane opptek, og kor mange SEPARATE
+ * utbyggingar ein ser samtidig.
+ *
+ * Kvar synleg turbin opptek eit kompass-intervall `kurs ± synsvinkel/2`.
+ * Talet me vil ha er UNIONEN av desse intervalla — ikkje summen: to turbinar
+ * som overlappar i synsranda skal telje éin gong. Intervall som kryssar nord
+ * (0°/360°) vert delte i to før samanslåinga.
+ *
+ * @param {object[]} synlege Turbinresultat som ikkje er «skjult»
+ */
+export function kumulativHorisont(synlege) {
+    if (synlege.length === 0) {
+        return { gradar: 0, anlegg: 0, midtKurs: null };
+    }
+
+    const intervall = [];
+    for (const r of synlege) {
+        const halv = Math.max(0, (r.dominans?.synsvinkelGrader ?? 0)) / 2;
+        if (halv <= 0) continue;
+        let fra = r.kurs - halv;
+        let til = r.kurs + halv;
+        // Normaliser og del ved nord-krysset.
+        if (fra < 0)        { intervall.push([fra + 360, 360], [0, til]); }
+        else if (til > 360) { intervall.push([fra, 360], [0, til - 360]); }
+        else                { intervall.push([fra, til]); }
+    }
+
+    intervall.sort((a, b) => a[0] - b[0]);
+    let gradar = 0;
+    let cursorSlutt = -1;
+    for (const [fra, til] of intervall) {
+        if (fra > cursorSlutt) {          // nytt, usamanhengande band
+            gradar += til - fra;
+            cursorSlutt = til;
+        } else if (til > cursorSlutt) {   // overlapp — utvid bandet
+            gradar += til - cursorSlutt;
+            cursorSlutt = til;
+        }
+    }
+
+    // Vekta midtkurs (mot den mest dominerande) — berre til ei retningsetikett.
+    const sumVekt = synlege.reduce((s, r) => s + (r.dominans?.synsvinkelGrader ?? 0.1), 0);
+    let sx = 0, sy = 0;
+    for (const r of synlege) {
+        const v = (r.dominans?.synsvinkelGrader ?? 0.1) / sumVekt;
+        sx += Math.cos(r.kurs * Math.PI / 180) * v;
+        sy += Math.sin(r.kurs * Math.PI / 180) * v;
+    }
+    const midtKurs = (Math.atan2(sy, sx) * 180 / Math.PI + 360) % 360;
+
+    return {
+        gradar: Math.min(360, Math.round(gradar)),
+        anlegg: new Set(synlege.map((r) => r.anleggsnr).filter((n) => n != null)).size,
+        midtKurs,
+    };
+}
+
+/**
  * Byggjer samandraget som visast øvst i panelet.
  *
  * @param {object[]} resultat Liste med utrekna turbinresultat
@@ -394,5 +456,6 @@ export function byggSamandrag(resultat) {
         naermaste,
         naermasteSynlege,
         mestDominerande,
+        kumulativHorisont: kumulativHorisont(synlege),
     };
 }

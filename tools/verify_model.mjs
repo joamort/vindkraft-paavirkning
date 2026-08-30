@@ -15,7 +15,7 @@
 
 import { readFileSync } from 'node:fs';
 import { CONFIG } from '../js/config.js';
-import { beregnPaaverknad, byggSamandrag, vurderSynlegheit } from '../js/utils/ImpactCalculator.js';
+import { beregnPaaverknad, byggSamandrag, vurderSynlegheit, kumulativHorisont } from '../js/utils/ImpactCalculator.js';
 import {
     sjekkOverflate, overflateSamandrag, vurderMedOverflate,
     kanEndrastAvOverflate, tomOverflateCache, overflatePunktFor,
@@ -264,6 +264,40 @@ try {
         ekteResultat.every((r) => r.dominans.rd > 35));
 } catch (e) {
     sjekk('ekte-data-testen kunne køyrast', false, `${e.message} (er php -S localhost:8011 oppe?)`);
+}
+
+// ===================================================================
+console.log('\n=== 4b. Kumulativ horisontbelastning (union av synsvinklar) ===\n');
+{
+    const t = (kurs, synsvinkel, anleggsnr = 1) => ({
+        kurs, anleggsnr, dominans: { synsvinkelGrader: synsvinkel },
+    });
+
+    const usamanhengande = kumulativHorisont([t(100, 4), t(200, 6)]);
+    sjekk('to usamanhengande turbinar → sum av synsvinklane', usamanhengande.gradar === 10,
+        `${usamanhengande.gradar}° (venta 10)`);
+
+    const overlapp = kumulativHorisont([t(100, 10), t(103, 10)]);
+    sjekk('to overlappande → union, ikkje sum', overlapp.gradar === 13,
+        `${overlapp.gradar}° (venta 13, ikkje 20)`);
+
+    const nord = kumulativHorisont([t(359, 6), t(1, 4)]);
+    sjekk('intervall som kryssar nord vert handtert', nord.gradar === 7,
+        `${nord.gradar}° (venta 7)`);
+
+    const fleire = kumulativHorisont([t(90, 2, 10), t(95, 2, 10), t(270, 2, 20)]);
+    sjekk('talet separate anlegg', fleire.anlegg === 2, `${fleire.anlegg} (venta 2)`);
+
+    const tom = kumulativHorisont([]);
+    sjekk('tomt inn → 0° / 0 anlegg', tom.gradar === 0 && tom.anlegg === 0);
+
+    const nullSyn = kumulativHorisont([t(100, 0), t(120, 0)]);
+    sjekk('turbinar med 0° synsvinkel bidreg ikkje', nullSyn.gradar === 0);
+
+    const heilRing = kumulativHorisont(
+        Array.from({ length: 36 }, (_, i) => t(i * 10, 20)),
+    );
+    sjekk('union kan ikkje overstige 360°', heilRing.gradar === 360, `${heilRing.gradar}°`);
 }
 
 // ===================================================================
