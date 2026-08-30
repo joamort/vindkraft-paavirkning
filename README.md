@@ -28,9 +28,10 @@ operativsystemet ditt:
 | macOS (Apple Silicon) | `…-mac-arm64.tar.gz` | dobbeltklikk `start.command` |
 | Linux (x86_64 / arm64) | `…-linux-*.tar.gz` | køyr `./start.sh` |
 
-Pakk ut, start, og nettlesaren opnar `http://localhost:8011`. Fyrste
-oppstart byggjer ein turbin-cache (~10 s). Webtenaren (FrankenPHP med PHP
-innebygd) ligg i pakka; ingenting vert installert på maskina.
+Pakk ut og start — nettlesaren opnar `http://localhost:8011` automatisk når
+serveren er klar. Turbindata følgjer med pakka (ein snapshot frå då utgåva
+vart laga), så oppstarten er rask. Webtenaren (FrankenPHP med PHP innebygd)
+ligg i pakka; ingenting vert installert på maskina.
 
 ### 2. Docker
 

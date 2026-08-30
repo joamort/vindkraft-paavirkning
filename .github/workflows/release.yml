@@ -45,6 +45,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: PHP (for cache-bygg)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: curl, dom, simplexml, mbstring
+          coverage: none
+
+      - name: Bygg turbin-cache (så fyrste start er umiddelbar)
+        run: |
+          php cron/fetch_turbines.php
+          ls -la cache/*.json
+
       - name: Last ned FrankenPHP (${{ matrix.name }})
         run: |
           set -eux
@@ -83,6 +95,10 @@ jobs:
           cp scripts/dist/php.ini "$dir/"
           mkdir -p "$dir/cache/elevation" "$dir/cache/ratelimit" "$dir/logs"
           touch "$dir/cache/elevation/.gitkeep" "$dir/cache/ratelimit/.gitkeep"
+
+          # Ferdigbygd turbin-cache — fyrste start treng då ikkje henta frå NVE.
+          # (elevation/-cachen er punktspesifikk og vert IKKJE pakka med.)
+          cp cache/turbines.json cache/areas.json cache/meta.json cache/layouts.json "$dir/cache/"
 
           # --- Startarar ---
           cp scripts/dist/LES-MEG.txt "$dir/"

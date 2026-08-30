@@ -15,14 +15,17 @@ if not exist "frankenphp.exe" (
 	exit /b 1
 )
 
+REM Turbindata foelgjer normalt med pakka. Manglar fila, hentar vi henne no
+REM (kan ta opptil eit par minutt utan nett; appen opnar uansett etterpaa).
 if not exist "cache\turbines.json" (
-	echo   Byggjer turbindata ^(~10 s, berre fyrste gong, hentar fraa NVE^)...
-	echo   ^(utan nett kan dette bruke eit par minutt paa aa gi opp - appen
-	echo   opnar likevel, og du kan starte paa nytt seinare^)
+	echo   Turbindata manglar - hentar fraa NVE ^(kan ta opptil eit par minutt^)...
 	frankenphp.exe php-cli cron\fetch_turbines.php
 )
 
-echo   Opnar http://localhost:8011   ^(lat att dette vindauget for aa stoppe^)
-start "" "http://localhost:8011"
+echo   Serveren startar. Nettlesaren opnar seg automatisk paa http://localhost:8011
+echo   ^(lat att dette vindauget for aa stoppe^)
+
+REM Opne nettlesaren etter 4 sekund, i bakgrunnen, saa serveren rekk aa bli klar.
+start "" /b cmd /c "timeout /t 4 /nobreak >nul & start "" http://localhost:8011"
 
 frankenphp.exe run --config Caddyfile

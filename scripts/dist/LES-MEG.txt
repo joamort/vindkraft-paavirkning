@@ -13,8 +13,9 @@ SLIK KØYRER DU
   macOS:          dobbeltklikk  start.command   (eller køyr ./start.sh)
   Linux:          køyr          ./start.sh
 
-Fyrste gong byggjer appen ein turbin-cache (~10 sekund, hentar opne data
-frå NVE). Deretter opnar http://localhost:8011 seg i nettlesaren.
+Turbindata følgjer med pakka, så oppstarten er rask. Nettlesaren opnar seg
+automatisk på http://localhost:8011 så snart serveren er klar — vent til
+den gjer det (ikkje opne adressa manuelt før).
 
 For å stoppe: lat att terminalvindauget (eller trykk Ctrl+C).
 
@@ -55,7 +56,9 @@ Dei fleste Windows 10/11-maskiner har han alt.
 OPPDATERE TURBINDATA
 --------------------
 
-Slett cache/turbines.json og start på nytt, så vert han bygd om.
+Turbindata i pakka er ein snapshot frå då utgåva vart laga. For å hente
+ferske data: slett cache/turbines.json og start på nytt (krev internett,
+kan ta opptil eit par minutt).
 
 
 Lisens: MIT. Kjeldekode: https://github.com/joamort/vindkraft-paavirkning
