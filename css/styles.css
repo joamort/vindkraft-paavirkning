@@ -1202,10 +1202,12 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .natt-atterhald { font-size: 11.5px; margin: 8px 0 0; line-height: 1.5; opacity: 0.72; }
 .natt-boks.natt-ingen .natt-atterhald { opacity: 1; }
 
-.rad-lys { font-size: 7px; vertical-align: middle; margin-left: 4px; }
+/* Statusflagg-klynga i .rad-hale — fast synleg, aldri kutta av meta-ellipsisen. */
+.rad-flagg { display: inline-flex; align-items: center; gap: 5px; }
+.rad-lys { font-size: 8px; }
 .rad-lys-raud { color: #dc2626; }
 .rad-lys-kvit { color: #94a3b8; }
-.rad-skygge { font-size: 9px; color: var(--gul); margin-left: 4px; }
+.rad-skygge { font-size: 10px; color: #a16207; }
 
 .rad-eier {
     display: block;
@@ -1333,7 +1335,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .skog-boks .knapp { margin-top: 10px; }
 
 /* Merket i turbinlista. */
-.rad-skog { font-size: 9px; color: #16a34a; margin-left: 4px; }
+.rad-skog { font-size: 10px; color: #16a34a; }
 .rad-skog-skjult { color: #047857; }
 
 /* ---- Detaljvisinga ---- */

@@ -821,26 +821,10 @@ export class ImpactPanel {
                             ${r.analysert && r.synlegheit.nokkel !== 'skjult'
                                 ? `· ${fmtProsent(r.synlegheit.synlegDel)} synleg` : ''}
                             ${r.analysert && r.synlegheit.navSynleg ? ' · rotor fri' : ''}
-                            ${r.hinderlys?.toppSynleg
-                                ? `<i class="fa-solid fa-circle rad-lys ${r.hinderlys.hoyintensitet ? 'rad-lys-kvit' : 'rad-lys-raud'}"
-                                      title="Påbode hinderlys på toppen er synleg herfrå"></i>` : ''}
-                            ${r.skyggekast?.minuttPerAar > 0
-                                ? `<i class="fa-solid fa-sun rad-skygge"
-                                      title="Teoretisk skyggekast ${fmtTimar(r.skyggekast.timarPerAar)}/år"></i>` : ''}
-                            ${r.overflate?.endring === 'skjult'
-                                ? `<i class="fa-solid fa-tree rad-skog rad-skog-skjult"
-                                      title="Skjult når skog/bygningar vert rekna med (${
-                                          r.overflate.differanseM.toFixed(1)} m over bakken ${
-                                          fmtAvstand(r.overflate.kritiskD)} unna)"></i>`
-                                : (r.overflate?.endring === 'redusert'
-                                    ? `<i class="fa-solid fa-tree rad-skog"
-                                          title="Mindre synleg med skog/bygningar: ${
-                                              fmtProsent(r.overflate.synlegheit.synlegDel)} mot ${
-                                              fmtProsent(r.synlegheit.synlegDel)} på bar bakke"></i>`
-                                    : '')}
                         </span>
                     </span>
                     <span class="rad-hale">
+                        ${this._radFlaggHtml(r)}
                         ${r.stoy
                             ? `<span class="rad-stoy ${stoyKat.klasse}">${formaterStoy(r.stoy.ldenDb, true)} dB</span>`
                             : '<span class="rad-stoy tom">–</span>'}
@@ -848,6 +832,36 @@ export class ImpactPanel {
                     </span>
                 </button>
             </li>`;
+    }
+
+    /**
+     * Statusflagg for turbinraden: hinderlys synleg, skyggekast, skjult/redusert
+     * av skog. Låg før inne i `.rad-meta`, som er ei éilinje med
+     * `text-overflow: ellipsis` — på eit smalt panel vart flagga difor ofte
+     * kutta heilt bort av ellipsisen, altså usynlege akkurat når dei bar
+     * informasjon. Dei bur no i `.rad-hale` (flex-shrink: 0), som ein fast
+     * synleg klynge ved sida av dB-merket. Alt er forklart i detaljvisinga.
+     */
+    _radFlaggHtml(r) {
+        const flagg = [];
+
+        if (r.hinderlys?.toppSynleg) {
+            flagg.push(`<i class="fa-solid fa-circle rad-lys ${r.hinderlys.hoyintensitet ? 'rad-lys-kvit' : 'rad-lys-raud'}"
+                title="Påbode hinderlys på toppen er synleg herfrå"></i>`);
+        }
+        if (r.skyggekast?.minuttPerAar > 0) {
+            flagg.push(`<i class="fa-solid fa-sun rad-skygge"
+                title="Teoretisk skyggekast ${fmtTimar(r.skyggekast.timarPerAar)}/år"></i>`);
+        }
+        if (r.overflate?.endring === 'skjult') {
+            flagg.push(`<i class="fa-solid fa-tree rad-skog rad-skog-skjult"
+                title="Skjult når skog/bygningar vert rekna med (${r.overflate.differanseM.toFixed(1)} m over bakken ${fmtAvstand(r.overflate.kritiskD)} unna)"></i>`);
+        } else if (r.overflate?.endring === 'redusert') {
+            flagg.push(`<i class="fa-solid fa-tree rad-skog"
+                title="Mindre synleg med skog/bygningar: ${fmtProsent(r.overflate.synlegheit.synlegDel)} mot ${fmtProsent(r.synlegheit.synlegDel)} på bar bakke"></i>`);
+        }
+
+        return flagg.length ? `<span class="rad-flagg">${flagg.join('')}</span>` : '';
     }
 
     // ------------------------------------------------------------- detalj
