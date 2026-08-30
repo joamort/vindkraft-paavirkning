@@ -767,6 +767,7 @@ export const CONFIG = {
         hoydeprofil: 'backend/api/elevation_profile.php',
         hoydepunkt: 'backend/api/elevation_point.php',
         overflatepunkt: 'backend/api/surface_points.php',
+        adressesok: 'backend/api/adressesok.php',
         versjonssjekk: 'backend/api/version_check.php',
         oppdaterTurbindata: 'backend/api/refresh_turbines.php',
     },

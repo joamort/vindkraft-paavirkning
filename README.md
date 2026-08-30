@@ -71,9 +71,12 @@ og `php -S` er elles einstråds og deadlockar).
 
 ## Personvern
 
-- **Turbindata (NVE)** og **terrengdata (Kartverket WPS)** vert henta av
-  PHP-backenden som køyrer **lokalt på maskina di**. Nettlesaren snakkar aldri
-  direkte med desse tenestene, og det finst ingen mellomtenar.
+- **Turbindata (NVE)**, **terrengdata (Kartverket WPS)** og **adressesøk
+  (Kartverket)** vert henta av PHP-backenden som køyrer **lokalt på maskina
+  di**. Nettlesaren snakkar aldri direkte med desse tenestene, og det finst
+  ingen mellomtenar. Skriv du inn ei adresse, går sjølve søkjestrengen til
+  Kartverket for geokoding (som koordinatane alt gjer for høgdedata) — han
+  vert ikkje lagra eller logga.
 - **Punktet du vel** vert aldri sendt nokon stad. Heile analysen skjer lokalt.
   Feilloggen (`logs/`) inneheld aldri koordinatar.
 - Nettlesaren lastar nokre bibliotek (Leaflet, MarkerCluster, Chart.js, Font

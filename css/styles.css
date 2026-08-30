@@ -97,6 +97,70 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 
 .topplinje-verktoy { display: flex; gap: 6px; }
 
+/* ---------------------------------------------------- Adressesøk */
+.adressesok {
+    position: relative;
+    flex: 1 1 240px;
+    max-width: 380px;
+    display: flex;
+    align-items: center;
+}
+.adressesok > i {
+    position: absolute;
+    left: 11px;
+    font-size: 13px;
+    color: var(--tekst-svakast);
+    pointer-events: none;
+}
+#adresse-input {
+    width: 100%;
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 12px 7px 32px;
+    color: var(--tekst);
+    background: var(--flate-2);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius-liten);
+    transition: border-color 0.15s, background 0.15s;
+}
+#adresse-input:focus {
+    outline: none;
+    background: var(--flate);
+    border-color: var(--primaer);
+}
+#adresse-input::-webkit-search-cancel-button { cursor: pointer; }
+
+.adresse-treff {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    background: var(--flate);
+    border: 1px solid var(--kant-sterk);
+    border-radius: var(--radius-liten);
+    box-shadow: var(--skugge-stor);
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 1300;
+}
+.adresse-treff li {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 9px;
+    border-radius: var(--radius-liten);
+    cursor: pointer;
+    font-size: 13px;
+}
+.adresse-treff li > i { color: var(--tekst-svakast); font-size: 12px; flex-shrink: 0; }
+.adresse-treff li:hover,
+.adresse-treff li.aktiv { background: var(--primaer-lys); }
+.adresse-treff li span { display: flex; flex-direction: column; min-width: 0; }
+.adr-stad { color: var(--tekst-svak); font-size: 11.5px; }
+
 .knapp {
     display: inline-flex;
     align-items: center;
@@ -1505,6 +1569,9 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
     .disclaimer { font-size: 11.5px; padding: 8px 12px; }
     .nokkeltal { grid-template-columns: repeat(2, 1fr); }
     .merke h1 { font-size: 14px; }
+    /* Adressesøket er viktigare enn merke-undertittelen på ein smal skjerm. */
+    #datakjelde { display: none; }
+    .adressesok { flex-basis: 130px; }
 }
 
 /* ==========================================================================

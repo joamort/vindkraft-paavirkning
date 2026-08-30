@@ -76,6 +76,13 @@ jobs:
           check 403 /cache/layouts.json
           check 405 /backend/api/refresh_turbines.php
 
+          # adressesok.php: for kort spørjing → tom trefliste, ingen Kartverket-kall
+          as=$(curl -s "http://localhost:8011/backend/api/adressesok.php?q=ab")
+          case "$as" in
+            *'"ok":true'*'"treff":[]'*) echo "adressesok: ok ✓" ;;
+            *) echo "::error::adressesok uventa: ${as:0:120}"; fail=1 ;;
+          esac
+
           # version_check.php: utan version.json (som i biletet) skal han svare
           # reint JSON med naavaerande:null, utan å kontakte GitHub.
           vc=$(curl -s http://localhost:8011/backend/api/version_check.php)

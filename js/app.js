@@ -11,7 +11,7 @@ import { CONFIG } from './config.js';
 import { state } from './state.js';
 import {
     hentTurbinar, hentOmrader, hentHoyde, hentProfilar,
-    sjekkVersjon, oppdaterTurbindata,
+    sokAdresse, sjekkVersjon, oppdaterTurbindata,
 } from './api.js';
 import { MapManager } from './ui/MapManager.js';
 import { ImpactPanel } from './ui/ImpactPanel.js';
@@ -347,6 +347,96 @@ class VindApp {
                 e.preventDefault();
                 this.avbrytKandidat();
             }
+        });
+
+        this._bindAdressesok();
+    }
+
+    /**
+     * Adressesøk i topplinja. Debouncar mot backenden (som proxyar Kartverket),
+     * viser ei trefliste, og set punktet + startar analysen når brukaren vel
+     * eit treff — same veg som ei delbar `?lat=&lon=`-lenke.
+     */
+    _bindAdressesok() {
+        const felt = $('adresse-input');
+        const liste = $('adresse-treff');
+        if (!felt || !liste) return;
+
+        let avbrytar = null;
+        let aktivIndeks = -1;
+
+        const lukk = () => {
+            liste.hidden = true;
+            liste.innerHTML = '';
+            aktivIndeks = -1;
+            felt.setAttribute('aria-expanded', 'false');
+        };
+
+        const velg = (lat, lon, tekst) => {
+            lukk();
+            felt.value = tekst;
+            felt.blur();
+            this.kart.panorerTil(lat, lon);
+            this.kart.kart.setZoom(13);
+            this.settPunkt(lat, lon);
+        };
+
+        const tegn = (treff) => {
+            if (!treff || treff.length === 0) { lukk(); return; }
+            liste.innerHTML = treff.map((t, i) => `
+                <li role="option" id="adr-${i}" data-action="velg-adresse"
+                    data-lat="${t.lat}" data-lon="${t.lon}" data-tekst="${escHtml(t.tekst)}">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span><strong>${escHtml(t.tekst)}</strong>${t.stad ? `<span class="adr-stad">${escHtml(t.stad)}</span>` : ''}</span>
+                </li>`).join('');
+            liste.hidden = false;
+            aktivIndeks = -1;
+            felt.setAttribute('aria-expanded', 'true');
+        };
+
+        const sok = debounce(async () => {
+            const q = felt.value.trim();
+            if (q.length < 3) { lukk(); return; }
+            avbrytar?.abort();
+            avbrytar = new AbortController();
+            const treff = await sokAdresse(q, avbrytar.signal);
+            if (felt.value.trim() === q) tegn(treff);
+        }, 250);
+
+        felt.addEventListener('input', sok);
+        felt.addEventListener('focus', () => { if (felt.value.trim().length >= 3) sok(); });
+
+        felt.addEventListener('keydown', (e) => {
+            const val = [...liste.querySelectorAll('li')];
+            if (e.key === 'ArrowDown' && val.length) {
+                e.preventDefault();
+                aktivIndeks = Math.min(aktivIndeks + 1, val.length - 1);
+            } else if (e.key === 'ArrowUp' && val.length) {
+                e.preventDefault();
+                aktivIndeks = Math.max(aktivIndeks - 1, 0);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const li = val[aktivIndeks] ?? val[0];
+                if (li) velg(Number(li.dataset.lat), Number(li.dataset.lon), li.dataset.tekst);
+                return;
+            } else if (e.key === 'Escape') {
+                lukk();
+                return;
+            } else {
+                return;
+            }
+            val.forEach((li, i) => li.classList.toggle('aktiv', i === aktivIndeks));
+            if (val[aktivIndeks]) felt.setAttribute('aria-activedescendant', val[aktivIndeks].id);
+        });
+
+        liste.addEventListener('click', (e) => {
+            const li = e.target.closest('[data-action="velg-adresse"]');
+            if (li) velg(Number(li.dataset.lat), Number(li.dataset.lon), li.dataset.tekst);
+        });
+
+        // Klikk utanfor lukkar lista.
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.adressesok')) lukk();
         });
     }
 

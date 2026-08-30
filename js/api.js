@@ -117,6 +117,28 @@ export async function hentProfilar(origo, mal, signal) {
 }
 
 /**
+ * Adressesøk via Kartverket (proxya gjennom backenden). Returnerer ei liste
+ * `{tekst, stad, lat, lon}`. Feilar det, får kallaren null og bør syne
+ * «ingen treff» heller enn ei feilmelding.
+ *
+ * @param {string} q
+ * @param {AbortSignal} [signal]
+ */
+export async function sokAdresse(q, signal) {
+    try {
+        const respons = await fetch(
+            `${CONFIG.api.adressesok}?q=${encodeURIComponent(q)}`,
+            { signal },
+        );
+        if (!respons.ok) return null;
+        const data = await respons.json();
+        return Array.isArray(data?.treff) ? data.treff : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Diskré versjonssjekk for den sjølvhosta appen. Backenden spør GitHub (maks
  * éin gong per døgn) og svarar `{naavaerande, siste, nyare, url}`. Feilar det,
  * eller er dette ein web-/kjeldekode-installasjon, får kallaren null og skal
