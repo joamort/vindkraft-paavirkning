@@ -47,6 +47,9 @@
         <button type="button" class="knapp" data-action="eksporter-alle" title="Last ned heile (filtrerte) turbindatasettet som KML">
             <i class="fa-solid fa-globe"></i><span>Eksporter alle (KML)</span>
         </button>
+        <button type="button" class="knapp" data-action="skriv-ut" title="Éin-sides rapport for punktet (skriv ut eller lagre som PDF)">
+            <i class="fa-solid fa-file-pdf"></i><span>Rapport (PDF)</span>
+        </button>
         <button type="button" class="knapp" data-action="veksle-info">
             <i class="fa-solid fa-circle-info"></i><span>Om modellen</span>
         </button>
@@ -304,6 +307,9 @@
 <div id="panorama" class="panorama" aria-hidden="true"></div>
 
 <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+<!-- Éin-sides rapport. Skjult på skjerm; @media print viser berre denne. -->
+<div id="utskrift"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>

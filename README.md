@@ -2,10 +2,12 @@
 
 Interaktivt webkart som viser korleis vindkraftanlegg på land visuelt og
 støymessig påverkar eit sjølvvalt punkt (t.d. bustaden din). Du klikkar eit
-punkt, appen finn turbinar i nærleiken, hentar terrengprofilar frå Kartverket,
-og reknar ut kva som **faktisk er synleg** — ikkje berre kor langt unna
-turbinane står. I tillegg: forenkla støyestimat (L_den mot T-1442),
-teoretisk skyggekast, hinderlys, og eit 3D-panorama med flyfoto.
+punkt (eller søkjer på ei adresse), appen finn turbinar i nærleiken, hentar
+terrengprofilar frå Kartverket, og reknar ut kva som **faktisk er synleg** —
+ikkje berre kor langt unna turbinane står. I tillegg: forenkla støyestimat
+(L_den mot T-1442), teoretisk skyggekast, hinderlys, kumulativ
+horisontbelastning, eit 3D-panorama med flyfoto, og ein éin-sides
+PDF-rapport for punktet.
 
 Arkitektur, datakjelder og modellval: **[PLAN.md](PLAN.md)** og
 **[CLAUDE.md](CLAUDE.md)**.

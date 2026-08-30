@@ -26,7 +26,9 @@ import { erJustert, avstandUtanforPlanomrade } from './utils/TurbinJustering.js'
 import {
     sjekkOverflate, overflateSamandrag, kanEndrastAvOverflate,
 } from './utils/SurfaceCheck.js';
-import { escHtml, fmtDato, $, debounce } from './utils/dom.js';
+import {
+    escHtml, fmtDato, fmtAvstand, fmtDb, fmtMoh, fmtTimar, $, debounce,
+} from './utils/dom.js';
 import { initErrorReporter } from './utils/ErrorReporter.js';
 import { PanoramaView } from './ui/PanoramaView.js';
 import { hentHorisont, harHorisont } from './utils/Horizon.js';
@@ -301,6 +303,10 @@ class VindApp {
                     this._oppdaterTurbindataFraKnapp(el);
                     break;
 
+                case 'skriv-ut':
+                    this.skrivUt();
+                    break;
+
                 default:
                     break;
             }
@@ -379,6 +385,8 @@ class VindApp {
             this.kart.panorerTil(lat, lon);
             this.kart.kart.setZoom(13);
             this.settPunkt(lat, lon);
+            // Etter settPunkt (som nullstiller han for alle andre vegar inn).
+            this.sisteAdresse = tekst || null;
         };
 
         const tegn = (treff) => {
@@ -536,6 +544,8 @@ class VindApp {
     async settPunkt(lat, lon) {
         this.kart.settPunkt(lat, lon, state.radiusM);
         this.panel.lukkDetalj();
+        // Gjeld berre om punktet vart valt via adressesøk — sett på nytt der.
+        this.sisteAdresse = null;
 
         // Hent bakkehøgda før analysen — heile siktlinjeberekninga hengjer på
         // den, så me har ikkje noko å rekne med utan.
@@ -1453,6 +1463,117 @@ class VindApp {
         const kml = byggKmlAlleTurbinar(state.turbinar, state.statusFilter);
         lastNedFil('vindturbinar-noreg.kml', kml);
         Toast.success('Eksporterte heile datasettet til KML.');
+    }
+
+    // ------------------------------------------------------------ PDF-rapport
+
+    /**
+     * Éin-sides rapport for punktet. Fyller #utskrift og opnar
+     * utskriftsdialogen — brukaren vel «Lagre som PDF». Ingen bibliotek:
+     * `@media print` viser berre #utskrift, `@media screen` skjuler han.
+     */
+    skrivUt() {
+        if (!state.punkt || state.resultat.length === 0) {
+            Toast.info('Analyser eit punkt først.');
+            return;
+        }
+        const el = $('utskrift');
+        if (!el) return;
+        el.innerHTML = this._byggUtskrift();
+        // Layouten treng éin frame før utskriftsdialogen les han.
+        requestAnimationFrame(() => window.print());
+    }
+
+    _byggUtskrift() {
+        const p = state.punkt;
+        const s = state.samandrag ?? byggSamandrag(state.resultat);
+        const stoy = state.samlaStoy;
+        const kh = s.kumulativHorisont;
+        const sk = s.skyggekast;
+        const hl = s.hinderlys;
+        const o = overflateSamandrag(state.resultat);
+        const naa = new Date();
+
+        const tittel = this.sisteAdresse
+            ? escHtml(this.sisteAdresse)
+            : `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`;
+
+        const rad = (dt, dd) => `<tr><th>${dt}</th><td>${dd}</td></tr>`;
+
+        // Per anlegg: kor mange turbinar analyserte / synlege.
+        const perAnlegg = new Map();
+        for (const r of state.resultat) {
+            const a = perAnlegg.get(r.anleggsnr) ?? { analyserte: 0, synlege: 0 };
+            a.analyserte += 1;
+            if (r.analysert && r.synlegheit.nokkel !== 'skjult') a.synlege += 1;
+            perAnlegg.set(r.anleggsnr, a);
+        }
+        const anleggRader = [...perAnlegg.entries()]
+            .map(([nr, a]) => {
+                const anlegg = state.finnAnlegg(nr);
+                const namn = anlegg?.navn ?? `Anlegg ${nr}`;
+                const stad = anlegg?.kommune && anlegg.kommune.toLowerCase() !== namn.toLowerCase()
+                    ? ` (${escHtml(anlegg.kommune)})` : '';
+                const status = anlegg?.status ? CONFIG.status[anlegg.status]?.tekst ?? '' : '';
+                return `<tr><td>${escHtml(namn)}${stad}</td><td>${escHtml(status)}</td>`
+                     + `<td>${a.synlege} / ${a.analyserte}</td></tr>`;
+            }).join('');
+
+        const delelenke = `${location.origin}${location.pathname}`
+            + `?lat=${p.lat.toFixed(5)}&lon=${p.lon.toFixed(5)}&r=${state.radiusM}`;
+
+        return `
+        <header class="u-topp">
+            <h1>Vindkraft-påverknad</h1>
+            <p class="u-undertittel">Vurdering for <strong>${tittel}</strong></p>
+            <p class="u-meta">Radius ${Math.round(state.radiusM / 1000)} km ·
+                utskrift ${fmtDato(naa.toISOString())} ${naa.toTimeString().slice(0, 5)}</p>
+        </header>
+
+        <table class="u-tabell">
+            ${rad('Punkt', `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)} · bakke ${fmtMoh(p.hoyde)}${p.terreng ? ` · ${escHtml(p.terreng)}` : ''}`)}
+            ${rad('Synlege turbinar', `<strong>${s.synlege}</strong> av ${s.analyserte} analyserte`)}
+            ${rad('Rotor i fri sikt', `${s.rotorSynlege}`)}
+            ${rad('Næraste turbin', s.naermaste ? `${fmtAvstand(s.naermaste.avstandM)} mot ${escHtml(s.naermaste.retning)}` : '–')}
+            ${rad('Næraste synlege', s.naermasteSynlege ? `${escHtml(s.naermasteSynlege.navn)}, ${fmtAvstand(s.naermasteSynlege.avstandM)}` : 'Ingen synlege')}
+            ${rad('Mest dominerande', s.mestDominerande
+                ? `${escHtml(s.mestDominerande.navn)} — ${escHtml(s.mestDominerande.dominans.tekst.toLowerCase())} (${s.mestDominerande.dominans.synsvinkelGrader.toFixed(1)}° synsvinkel)`
+                : 'Ingen synlege turbinar')}
+            ${kh && kh.gradar > 0 ? rad('Horisontbelastning', `Turbinane fyller <strong>${kh.gradar}°</strong> av synsranda${kh.anlegg > 1 ? ` · ${kh.anlegg} anlegg` : ''}`) : ''}
+            ${rad('Samla støyestimat', stoy
+                ? `L<sub>den</sub> <strong>${fmtDb(stoy.ldenDb)}</strong> (L<sub>pA</sub> ${fmtDb(stoy.lpDb)}) · T-1442 rettleiande grense 45 dB`
+                : '–')}
+            ${sk ? rad('Skyggekast (teoretisk)', sk.turbinarMedSkygge === 0
+                ? 'Ingen turbinar kan geometrisk kaste skugge på punktet'
+                : `<strong>${fmtTimar(sk.timarPerAar)}/år</strong>, verste dag ${Math.round(sk.maksMinuttPerDag)} min · NVE-praksis: 30 t/år / 30 min/dag (teoretisk)`) : ''}
+            ${hl && hl.merkepliktige > 0 ? rad('Hinderlys om natta',
+                `${hl.lyspunktSynlege} synlege lyspunkt frå ${hl.merkepliktige} merkepliktige turbinar`) : ''}
+            ${o.sjekka > 0 ? rad('Skog og bygningar (DOM)',
+                `${o.skjulte} av ${o.sjekka} synlege turbinar skjulte når vegetasjon/hus vert rekna med (nedre grense)`)
+                : rad('Skog og bygningar (DOM)', 'Ikkje sjekka — hovudtala er bar bakke')}
+        </table>
+
+        ${anleggRader ? `
+        <h2>Anlegg i analysen</h2>
+        <table class="u-tabell u-anlegg">
+            <tr><th>Anlegg</th><th>Status</th><th>Synlege / analyserte</th></tr>
+            ${anleggRader}
+        </table>` : ''}
+
+        <div class="u-atterhald">
+            <strong>Forenkla illustrasjon — ikkje ei konsekvensutgreiing.</strong>
+            Terrengmodellen er bar bakke (Kartverket DTM); skog og bygningar er ikkje med i
+            hovudtala. Turbinmål og lydeffekt finst ikkje i NVE-datasettet — dei er estimerte
+            frå merkeeffekt eller henta frå søknadsdokument. Støytala er grove overslag, ikkje
+            ein akustisk fagrapport. Skyggekastet er teoretisk (skyfri himmel, rotor alltid mot
+            sola). For planlagde anlegg er turbinposisjonane estimerte innanfor NVE sitt
+            planområde. Sjå «Om modellen» i appen for detaljar.
+        </div>
+
+        <footer class="u-bunn">
+            <span>Datakjelde: NVE (vindkraftanlegg, ${fmtDato(state.datagrunnlagGenerert)}) og Kartverket (høgdedata).</span>
+            <span>Gjenskap: ${escHtml(delelenke)}</span>
+        </footer>`;
     }
 }
 
