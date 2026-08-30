@@ -10,9 +10,10 @@
 import { CONFIG } from './config.js';
 import { state } from './state.js';
 import {
-    hentTurbinar, hentOmrader, hentHoyde, hentProfilar,
+    hentTurbinar, hentOmrader, hentHoyde, hentProfilar, hentDtmPunkt,
     sokAdresse, sjekkVersjon, oppdaterTurbindata,
 } from './api.js';
+import { byggSynlegheitskart } from './utils/Zvi.js';
 import { MapManager } from './ui/MapManager.js';
 import { ImpactPanel } from './ui/ImpactPanel.js';
 import { Toast } from './ui/Toast.js';
@@ -75,6 +76,11 @@ class VindApp {
 
         /** Hentar geoposisjon akkurat no? Sperrar «Min posisjon» (kan ta 12 s). */
         this.posisjonHentar = false;
+
+        /** Lokalt synlegheitskart (ZVI): cache, av/på, og køyrer-flagg. */
+        this._zviData = null;
+        this._zviPaa = false;
+        this._zviKoyrer = false;
 
         /** Avbryt pågåande analyse når brukaren flyttar punktet. */
         this.analyseAvbrytar = null;
@@ -217,6 +223,95 @@ class VindApp {
         }
     }
 
+    // -------------------------------------------------- lokalt synlegheitskart
+
+    /**
+     * Slå synlegheitskartet av/på. Rutenettet vert bygd éin gong per analyse
+     * (bakkehøgd i ~169 punkt, 1-2 Kartverket-kall) og cacha; sjølve
+     * fargelegginga gjenbruker analysen som alt er gjort. Sjå js/utils/Zvi.js.
+     */
+    async vekslSynlegheitskart(knapp) {
+        if (this._zviKoyrer) return;
+
+        if (this._zviPaa) {
+            this.kart.skjulSynlegheitskart();
+            this._zviPaa = false;
+            $('zvi-teiknforklaring').hidden = true;
+            knapp?.classList.remove('aktiv');
+            if (knapp) knapp.innerHTML = '<i class="fa-solid fa-border-all"></i> Vis synlegheitskart';
+            return;
+        }
+
+        if (!state.punkt || state.resultat.length === 0) {
+            Toast.info('Analyser eit punkt først.');
+            return;
+        }
+
+        const ok = await this._byggOgTegnZvi(knapp);
+        if (ok) {
+            this._zviPaa = true;
+            knapp?.classList.add('aktiv');
+            if (knapp) knapp.innerHTML = '<i class="fa-solid fa-border-all"></i> Skjul synlegheitskart';
+        }
+    }
+
+    _zviKnappStandard(knapp) {
+        if (knapp) {
+            knapp.disabled = false;
+            knapp.innerHTML = '<i class="fa-solid fa-border-all"></i> Vis synlegheitskart';
+        }
+    }
+
+    async _byggOgTegnZvi(knapp) {
+        if (!this._zviData) {
+            this._zviKoyrer = true;
+            if (knapp) {
+                knapp.disabled = true;
+                knapp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Bygg …';
+            }
+            try {
+                this._zviData = await byggSynlegheitskart(
+                    state.punkt, state.resultat, hentDtmPunkt,
+                );
+            } catch (e) {
+                Toast.error(`Klarte ikkje byggje synlegheitskartet: ${e.message}`);
+                this._zviKoyrer = false;
+                this._zviKnappStandard(knapp);
+                return false;
+            }
+            this._zviKoyrer = false;
+        }
+
+        this._zviKnappStandard(knapp);
+
+        const d = this._zviData;
+        const utanData = d.celler.filter((c) => c.tal == null).length;
+        if (utanData > d.celler.length * 0.6) {
+            Toast.info('Punktet ligg stort sett utanfor laserdekninga (t.d. på sjøen).');
+            return false;
+        }
+        if (d.maks <= 0) {
+            Toast.info('Ingen turbinar synlege i nærområdet — ingenting å fargeleggje.');
+            return false;
+        }
+
+        this.kart.tegnSynlegheitskart(d);
+        this._tegnZviForklaring(d);
+        return true;
+    }
+
+    _tegnZviForklaring(d) {
+        const el = $('zvi-teiknforklaring');
+        if (!el) return;
+        const sval = [0, Math.round(d.maks / 2), d.maks].filter((v, i, a) => a.indexOf(v) === i);
+        el.innerHTML = `
+            <div class="zvi-skala"></div>
+            <div class="zvi-merke">${sval.map((v) => `<span>${v}</span>`).join('')}</div>
+            <p class="zvi-hint">synlege turbinar per rute · rutenett ${d.sideM} m ·
+                <strong>tilnærming</strong>, sjå «Om modellen»</p>`;
+        el.hidden = false;
+    }
+
     // ------------------------------------------------------------ kontrollar
 
     _bindKontrollar() {
@@ -305,6 +400,10 @@ class VindApp {
 
                 case 'skriv-ut':
                     this.skrivUt();
+                    break;
+
+                case 'veksle-synlegheitskart':
+                    this.vekslSynlegheitskart(el);
                     break;
 
                 default:
@@ -618,6 +717,10 @@ class VindApp {
         this.analyseAvbrytar = new AbortController();
         const signal = this.analyseAvbrytar.signal;
 
+        // Synlegheitskartet gjeld det førre punktet/settet — kast det.
+        this._zviData = null;
+        this.kart.skjulSynlegheitskart();
+
         const iRadius = finnTurbinarIRadius(
             state.turbinar, state.punkt, state.radiusM, state.statusFilter,
         );
@@ -696,6 +799,9 @@ class VindApp {
             if (utanProfil > 0) {
                 Toast.warning(`${utanProfil} turbinar mangla terrengdata og er ikkje synlegheitsvurderte.`);
             }
+
+            // Var synlegheitskartet på? Bygg det på nytt for det nye settet.
+            if (this._zviPaa) this._byggOgTegnZvi($('zvi-knapp'));
         } catch (e) {
             if (e.name === 'AbortError') return;
             this.panel.skjulFramdrift();

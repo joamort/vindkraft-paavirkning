@@ -117,6 +117,31 @@ export async function hentProfilar(origo, mal, signal) {
 }
 
 /**
+ * Bar-bakke-høgd (dtm1) i vilkårlege punkt, via same endepunkt som DOM-sjekken
+ * (`surface_points.php` tek `datakilde`). Chunkar sjølv til ≤100 per kall.
+ * Brukast av synlegheitskartet. `null` i lista = punkt utan laserdekning.
+ *
+ * @param {Array<[number, number]>} punkter [[lat, lon], ...]
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<Array<number|null>>}
+ */
+export async function hentDtmPunkt(punkter, signal) {
+    const ut = [];
+    for (let i = 0; i < punkter.length; i += 100) {
+        const bolk = punkter.slice(i, i + 100);
+        const respons = await fetch(CONFIG.api.overflatepunkt, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ datakilde: 'dtm1', punkter: bolk }),
+            signal,
+        });
+        const data = await lesJson(respons, 'Bakkehøgd (dtm1)');
+        ut.push(...(data.hoyder ?? []));
+    }
+    return ut;
+}
+
+/**
  * Adressesøk via Kartverket (proxya gjennom backenden). Returnerer ei liste
  * `{tekst, stad, lat, lon}`. Feilar det, får kallaren null og bør syne
  * «ingen treff» heller enn ei feilmelding.

@@ -83,6 +83,13 @@ jobs:
             *) echo "::error::adressesok uventa: ${as:0:120}"; fail=1 ;;
           esac
 
+          # surface_points.php må godta datakilde dtm1 (synlegheitskartet) —
+          # tom punktliste → 400 frå valideringa, ingen Kartverket-kall
+          sp=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' -d '{"datakilde":"dtm1","punkter":[]}' \
+            http://localhost:8011/backend/api/surface_points.php)
+          test "$sp" = 400 || { echo "::error::surface_points dtm1 gav $sp (venta 400)"; fail=1; }
+
           # version_check.php: utan version.json (som i biletet) skal han svare
           # reint JSON med naavaerande:null, utan å kontakte GitHub.
           vc=$(curl -s http://localhost:8011/backend/api/version_check.php)

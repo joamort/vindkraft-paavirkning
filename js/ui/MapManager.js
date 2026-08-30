@@ -100,6 +100,8 @@ export class MapManager {
         // Planområdet til det anlegget brukaren nettopp har teke tak i ein
         // turbin frå — teikna oppå det vanlege områdelaget medan draginga står på.
         this.omradeFramhevLag = L.featureGroup().addTo(this.kart);
+        // Lokalt synlegheitskart (ZVI) — under siktlinjene så dei ikkje druknar.
+        this.synlegheitskartLag = L.featureGroup().addTo(this.kart);
         this.siktlinjeLag = L.featureGroup().addTo(this.kart);
 
         /**
@@ -456,6 +458,41 @@ export class MapManager {
 
     skjulOmradeFramheving() {
         this.omradeFramhevLag?.clearLayers();
+    }
+
+    /**
+     * Lokalt synlegheitskart: éin farga rute per celle, grøn (få synlege
+     * turbinar) → raud (mange). Celler utan laserdekning vert hoppa over.
+     * @param {{celler:object[], maks:number, celleM:number}} data
+     */
+    tegnSynlegheitskart(data) {
+        this.synlegheitskartLag.clearLayers();
+        if (!data || data.maks <= 0) return;
+
+        const mPerGradLat = 111_320;
+        const halvLat = (data.celleM / 2) / mPerGradLat;
+
+        for (const c of data.celler) {
+            if (c.tal == null) continue;
+            const mPerGradLon = 111_320 * Math.cos(c.lat * Math.PI / 180);
+            const halvLon = (data.celleM / 2) / mPerGradLon;
+            const brok = data.maks > 0 ? c.tal / data.maks : 0;
+            // Grøn (hue 130) → raud (hue 0).
+            const hue = 130 * (1 - brok);
+            this.synlegheitskartLag.addLayer(L.rectangle(
+                [[c.lat - halvLat, c.lon - halvLon], [c.lat + halvLat, c.lon + halvLon]],
+                {
+                    stroke: false,
+                    fillColor: `hsl(${hue}, 78%, 46%)`,
+                    fillOpacity: c.tal === 0 ? 0.12 : 0.42,
+                    interactive: false,
+                },
+            ));
+        }
+    }
+
+    skjulSynlegheitskart() {
+        this.synlegheitskartLag?.clearLayers();
     }
 
     /**

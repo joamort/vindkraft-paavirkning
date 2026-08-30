@@ -781,4 +781,21 @@ export const CONFIG = {
         /** Vis «turbindata er gamle»-varsel når snapshotet er eldre enn dette. */
         turbindataGamleDagar: 45,
     },
+
+    /**
+     * Synlegheitskart (lokal ZVI): eit rutenett rundt punktet, farga etter kor
+     * mange turbinar som er synlege frå kvar celle.
+     *
+     * Metoden er ei TILNÆRMING: for kvar celle vert terrenghorisonten mot kvar
+     * turbin justert for cella si eiga bakkehøgd, med same kritiske
+     * skjermingspunkt som analysepunktet (`horisontMoh + Δz·(1 − D/d_krit)`).
+     * Det held berre når cella er nær punktet — difor eit lite rutenett. Sjå
+     * js/utils/Zvi.js.
+     */
+    synlegheitskart: {
+        /** Sidelengd på rutenettet i meter (punktet i midten). */
+        sideM: 480,
+        /** Celler per side (odde tal → punktet får si eiga celle). 13² = 169. */
+        celler: 13,
+    },
 };

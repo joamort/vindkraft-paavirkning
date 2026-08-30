@@ -117,6 +117,15 @@
             </div>
 
             <div class="kontrollgruppe">
+                <span class="kontroll-tittel">Synlegheitskart</span>
+                <button type="button" class="minknapp brei" id="zvi-knapp" data-action="veksle-synlegheitskart"
+                        title="Fargelegg eit lite rutenett rundt punktet etter kor mange turbinar som er synlege frå kvar rute">
+                    <i class="fa-solid fa-border-all"></i> Vis synlegheitskart
+                </button>
+                <div id="zvi-teiknforklaring" class="zvi-teiknforklaring" hidden></div>
+            </div>
+
+            <div class="kontrollgruppe">
                 <span class="kontroll-tittel">Natt</span>
                 <button type="button" class="minknapp brei" data-action="veksle-natt"
                         title="Vis dei påbodne hinderlysa slik dei ville stått mot ein mørk himmel">
@@ -181,6 +190,25 @@
                 heilt annleis på 3 rotordiameter enn på 30. Dette er ein <strong>heuristikk frå
                 internasjonal landskapsanalyse-litteratur</strong>, ikkje ein norsk forskriftsverdi.
                 Bruk han som ein rettleiande peikepinn, ikkje ein fasit.
+            </p>
+            <p>
+                <strong>Horisontbelastning</strong> i samandraget er unionen av synsvinklane til dei
+                synlege turbinane (ikkje summen — overlappande turbinar tel éin gong), pluss talet
+                separate anlegg. SNH sin rettleiar om visuell framstilling vektlegg begge.
+            </p>
+
+            <h3>Synlegheitskart (lokalt)</h3>
+            <p>
+                Knappen «Vis synlegheitskart» fargelegg eit lite rutenett (~480 m) rundt punktet etter
+                kor mange turbinar som er synlege frå kvar rute — nyttig for å sjå om heile eigedomen er
+                råka eller berre nettopp der du klikka.
+            </p>
+            <p>
+                Dette er ei <strong>tilnærming</strong>: i staden for ein ny terrengprofil frå kvar rute
+                (hundrevis av oppslag) gjenbruker appen analysen som alt er gjord for punktet, og
+                justerer terrenghorisonten mot kvar turbin for rutas eiga bakkehøgd. Det held berre nær
+                punktet — difor det vesle rutenettet. Same D/d-forsterking som elles: nokre få meter
+                skilnad i bakkehøgd kan flytte horisonten mykje.
             </p>
 
             <h3>Støy</h3>

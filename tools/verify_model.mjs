@@ -35,6 +35,7 @@ import {
     innanforPlanomrade, avstandUtanforPlanomrade,
 } from '../js/utils/TurbinJustering.js';
 import { hentHorisont, tomHorisontCache } from '../js/utils/Horizon.js';
+import { byggSynlegheitskart } from '../js/utils/Zvi.js';
 import { hentNaerTerreng, byggRadier, resamplProfil } from '../js/utils/NaerTerreng.js';
 
 // Overstyrbar port: `VIND_API=http://localhost:8012 node tools/verify_model.mjs`,
@@ -298,6 +299,64 @@ console.log('\n=== 4b. Kumulativ horisontbelastning (union av synsvinklar) ===\n
         Array.from({ length: 36 }, (_, i) => t(i * 10, 20)),
     );
     sjekk('union kan ikkje overstige 360°', heilRing.gradar === 360, `${heilRing.gradar}°`);
+}
+
+// ===================================================================
+console.log('\n=== 4c. Lokalt synlegheitskart (ZVI-tilnærming) ===\n');
+{
+    const punkt = { lat: 63.0, lon: 10.0, hoyde: 300 };
+
+    // Ein turbin som er så vidt SKJULT frå punktet (horisonten ligg 5 m over
+    // vengetuppen), med eit kritisk skjermingspunkt tett på (d_krit = 50 m)
+    // og turbinen langt unna (D = 5000 m). Å heve auget litt skal då senke
+    // horisonten kraftig (D/d_krit = 100) og gjere turbinen synleg.
+    const turbin = {
+        analysert: true,
+        avstandM: 5000,
+        bakkeVedTurbinMoh: 400,
+        totalhoydeM: 150,                  // tuppMoh = 550
+        synlegheit: {
+            nokkel: 'skjult',
+            horisontMoh: 555,             // 5 m over tuppen
+            kritiskPunkt: { d: 50, z: 360 },
+        },
+    };
+
+    const flatDtm = async (punkter) => punkter.map(() => punkt.hoyde);
+    const flatKart = await byggSynlegheitskart(punkt, [turbin], flatDtm);
+    sjekk('flatt rutenett (alle celler = punkthøgda) → 0 synlege overalt',
+        flatKart.celler.every((c) => c.tal === 0) && flatKart.maks === 0);
+    sjekk('rutenettet dekkjer CONFIG.synlegheitskart.celler²',
+        flatKart.celler.length === CONFIG.synlegheitskart.celler ** 2,
+        `${flatKart.celler.length} celler`);
+
+    // Same, men no ligg cella med indeks 0 (nordvest) 1 m høgare.
+    const eiHevet = async (punkter) => punkter.map((_, i) => punkt.hoyde + (i === 0 ? 1 : 0));
+    const hevetKart = await byggSynlegheitskart(punkt, [turbin], eiHevet);
+    sjekk('ei celle heva 1 m senkar horisonten nok til at turbinen vert synleg',
+        hevetKart.celler[0].tal === 1 && hevetKart.maks === 1,
+        `celle[0].tal = ${hevetKart.celler[0].tal}`);
+    sjekk('dei andre cellene er uendra (framleis skjult)',
+        hevetKart.celler.slice(1).every((c) => c.tal === 0));
+
+    // Ei celle utan laserdekning skal bli null, ikkje 0.
+    const eiNull = async (punkter) => punkter.map((_, i) => (i === 5 ? null : punkt.hoyde));
+    const nullKart = await byggSynlegheitskart(punkt, [turbin], eiNull);
+    sjekk('celle utan laserdekning → tal = null (ikkje 0)',
+        nullKart.celler[5].tal === null);
+
+    // Uskjerma turbin (ingen kritisk punkt): horisonten følgjer auget, så
+    // synlegheita endrar seg ikkje av at ei celle ligg litt høgare.
+    const fri = {
+        analysert: true, avstandM: 8000, bakkeVedTurbinMoh: 500, totalhoydeM: 180,
+        synlegheit: { nokkel: 'synleg', horisontMoh: 250, kritiskPunkt: null },
+    };
+    const friKart = await byggSynlegheitskart(punkt, [fri], eiHevet);
+    sjekk('uskjerma turbin er synleg frå kvar celle uansett',
+        friKart.celler.every((c) => c.tal === 1));
+
+    sjekk('talIPunktet svarar til midtcella',
+        flatKart.talIPunktet === flatKart.celler[Math.floor(flatKart.celler.length / 2)].tal);
 }
 
 // ===================================================================
