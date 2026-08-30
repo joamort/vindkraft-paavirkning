@@ -43,22 +43,37 @@ jobs:
 
       - name: Røyktest — server, header og tilgangskontroll
         run: |
-          docker run -d --name vind -p 8011:8011 vindkraft-ci
-          for i in $(seq 1 30); do
-            curl -sf -o /dev/null http://localhost:8011/ && break
+          set -x
+          # VIND_SKIP_CACHE_BUILD: routing/header-testen treng ikkje turbindata,
+          # og NVE-hentinga er treg/upåliteleg frå runneren.
+          docker run -d --name vind -e VIND_SKIP_CACHE_BUILD=1 -p 8011:8011 vindkraft-ci
+
+          ok=
+          for i in $(seq 1 40); do
+            if curl -sf -o /dev/null http://localhost:8011/; then ok=1; break; fi
             sleep 2
           done
+          docker logs vind || true
+          if [ -z "$ok" ]; then echo "::error::serveren svara aldri"; exit 1; fi
 
-          echo "--- / skal svare 200 og innehalde CSP ---"
-          curl -si http://localhost:8011/ | tee /tmp/root.txt | head -1 | grep -q '200'
-          grep -qi 'content-security-policy' /tmp/root.txt
-          grep -qi "connect-src 'self'" /tmp/root.txt
+          fail=0
+          check() { # <forventa> <url>
+            got=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8011$2")
+            [ "$got" = "$1" ] || { echo "::error::$2 gav $got, venta $1"; fail=1; }
+          }
 
-          echo "--- interne stiar og sensitive filtypar skal svare 403 ---"
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8011/tools/verify_model.mjs)" = 403
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8011/scripts/dev.sh)" = 403
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8011/logs/error.log)" = 403
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8011/cache/elevation/.gitkeep)" = 403
+          curl -si http://localhost:8011/ > /tmp/root.txt
+          head -1 /tmp/root.txt | grep -q '200' || { echo "::error::/ ikkje 200"; fail=1; }
+          grep -qi 'content-security-policy' /tmp/root.txt || { echo "::error::manglar CSP"; fail=1; }
+          grep -qi "connect-src 'self'" /tmp/root.txt || { echo "::error::CSP connect-src feil"; fail=1; }
 
-          docker logs vind | tail -20
+          check 200 /css/styles.css
+          check 200 /js/app.js
+          check 403 /tools/verify_model.mjs
+          check 403 /scripts/dev.sh
+          check 403 /logs/error.log
+          check 403 /cache/elevation/.gitkeep
+          check 403 /cache/layouts.json
+
           docker rm -f vind
+          exit $fail

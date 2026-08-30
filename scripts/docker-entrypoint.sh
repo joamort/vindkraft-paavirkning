@@ -5,13 +5,15 @@ set -e
 
 cd /app
 
-if [ ! -f cache/turbines.json ]; then
+if [ ! -f cache/turbines.json ] && [ -z "$VIND_SKIP_CACHE_BUILD" ]; then
 	echo "→ Byggjer turbin-cachen (fyrste gong, ~10 s, hentar data frå NVE)…"
-	if php cron/fetch_turbines.php; then
+	# timeout så eit tregt/blokkert NVE-kall ikkje held serveren nede for evig.
+	if timeout 120 php cron/fetch_turbines.php; then
 		echo "→ Turbin-cache bygd."
 	else
-		echo "⚠  Klarte ikkje byggje turbin-cachen no (offline?). Appen startar"
-		echo "   likevel — prøv «docker compose restart» når du har nett."
+		echo "⚠  Klarte ikkje byggje turbin-cachen no (offline / NVE nede?)."
+		echo "   Appen startar likevel — køyr «docker compose restart» når du"
+		echo "   har nett, eller slett cache/turbines.json og prøv på nytt."
 	fi
 fi
 
