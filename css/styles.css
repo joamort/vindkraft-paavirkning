@@ -112,7 +112,27 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
     transition: background 0.15s, border-color 0.15s;
 }
 
-.knapp:hover { background: var(--primaer-lys); border-color: var(--primaer); }
+.knapp:hover:not(:disabled) { background: var(--primaer-lys); border-color: var(--primaer); }
+
+/* Medan ei asynkron handling køyrer (panorama, posisjon, oppdatering …). */
+.knapp:disabled,
+.knapp[disabled] {
+    opacity: 0.55;
+    cursor: progress;
+    pointer-events: none;
+}
+
+/* Synleg fokusmarkering for tastaturbruk — same på alle klikkbare element. */
+.knapp:focus-visible,
+.minknapp:focus-visible,
+.ikonknapp:focus-visible,
+.lenkeknapp:focus-visible,
+.varsel-knapp:focus-visible,
+.turbin-rad:focus-visible,
+[data-panorama]:focus-visible {
+    outline: 2px solid var(--primaer);
+    outline-offset: 2px;
+}
 
 .berre-mobil { display: none; }
 

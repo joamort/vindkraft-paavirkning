@@ -281,17 +281,17 @@ export class ImpactPanel {
      * @param {boolean} args.avkorta
      * @param {number} args.radiusM
      */
-    tegn({ punkt, resultat, samandrag, samlaStoy, avkorta, radiusM, overflateKoyrer = false }) {
+    tegn({ punkt, resultat, samandrag, samlaStoy, avkorta, radiusM, overflateKoyrer = false, panoramaKoyrer = false }) {
         const el = $('panel-innhald');
         if (!el) return;
 
         el.innerHTML = `
-            ${this._samandragHtml({ punkt, samandrag, samlaStoy, avkorta, radiusM, resultat, overflateKoyrer })}
+            ${this._samandragHtml({ punkt, samandrag, samlaStoy, avkorta, radiusM, resultat, overflateKoyrer, panoramaKoyrer })}
             ${this._listeHtml(resultat)}
         `;
     }
 
-    _samandragHtml({ punkt, samandrag, samlaStoy, avkorta, radiusM, resultat, overflateKoyrer }) {
+    _samandragHtml({ punkt, samandrag, samlaStoy, avkorta, radiusM, resultat, overflateKoyrer, panoramaKoyrer }) {
         const s = samandrag;
         const stoyKat = stoykategori(samlaStoy?.ldenDb ?? null);
 
@@ -381,7 +381,11 @@ export class ImpactPanel {
                 ${this._overflateSamandragHtml(resultat, overflateKoyrer)}
                 ${this._hinderlysSamandragHtml(s)}
                 ${this._skyggekastSamandragHtml(s)}
-                <div style="margin-top: 1rem;"><button type="button" class="knapp brei" data-action="vis-panorama"><i class="fa-solid fa-vr-cardboard"></i> Vis 3D-panorama</button></div>
+                <div style="margin-top: 1rem;">
+                    ${panoramaKoyrer
+                        ? `<button type="button" class="knapp brei" data-action="vis-panorama" disabled><i class="fa-solid fa-spinner fa-spin"></i> Byggjer 3D-panorama …</button>`
+                        : `<button type="button" class="knapp brei" data-action="vis-panorama"><i class="fa-solid fa-vr-cardboard"></i> Vis 3D-panorama</button>`}
+                </div>
                 ${naerskjermingVarsel}
                 ${avkortaVarsel}
             </section>`;

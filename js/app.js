@@ -64,6 +64,16 @@ class VindApp {
         /** Turbin-id-ar med eit DOM-oppslag undervegs (frå detaljvisinga). */
         this.overflateVentar = new Set();
 
+        /**
+         * Byggjer eit 3D-panorama akkurat no? Eit kaldt panorama kostar ~72
+         * terrengprofil-einingar (§21), så knappen MÅ vere sperra medan det
+         * står på — elles gir eit dobbeltklikk to fulle horisonthentingar.
+         */
+        this.panoramaKoyrer = false;
+
+        /** Hentar geoposisjon akkurat no? Sperrar «Min posisjon» (kan ta 12 s). */
+        this.posisjonHentar = false;
+
         /** Avbryt pågåande analyse når brukaren flyttar punktet. */
         this.analyseAvbrytar = null;
 
@@ -452,19 +462,41 @@ class VindApp {
 
     /** Geolocation berre etter eksplisitt brukarhandling (PLAN.md §8). */
     brukMinPosisjon() {
+        if (this.posisjonHentar) return;
         if (!navigator.geolocation) {
             Toast.warning('Nettlesaren din støttar ikkje posisjonering.');
             return;
         }
+
+        // Sperr knappen medan me ventar (timeout er 12 s) — og vis at det skjer
+        // noko. Utan dette stablar gjentekne klikk opp fleire posisjonsdialogar
+        // og fleire analysar.
+        const knapp = document.querySelector('[data-action="min-posisjon"]');
+        const ikon = knapp?.querySelector('i');
+        const opphavlegIkon = ikon?.className;
+        this.posisjonHentar = true;
+        if (knapp) knapp.disabled = true;
+        if (ikon) ikon.className = 'fa-solid fa-spinner fa-spin';
         Toast.info('Hentar posisjonen din …');
+
+        const ferdig = () => {
+            this.posisjonHentar = false;
+            if (knapp) knapp.disabled = false;
+            if (ikon && opphavlegIkon) ikon.className = opphavlegIkon;
+        };
+
         navigator.geolocation.getCurrentPosition(
             (pos) => {
+                ferdig();
                 const { latitude, longitude } = pos.coords;
                 this.kart.panorerTil(latitude, longitude);
                 this.kart.kart.setZoom(12);
                 this.settPunkt(latitude, longitude);
             },
-            (err) => Toast.error(`Fekk ikkje posisjonen din: ${err.message}`),
+            (err) => {
+                ferdig();
+                Toast.error(`Fekk ikkje posisjonen din: ${err.message}`);
+            },
             { enableHighAccuracy: true, timeout: 12000 },
         );
     }
@@ -517,6 +549,7 @@ class VindApp {
                 punkt: state.punkt, resultat: samla, samandrag, samlaStoy: stoy,
                 avkorta: iRadius.length > CONFIG.analyse.maksTurbinar,
                 radiusM: state.radiusM, overflateKoyrer: this.overflateKoyrer,
+                panoramaKoyrer: this.panoramaKoyrer,
             });
             this.kart.tegnSiktlinjer(state.punkt, samla);
             if (this.kart.nattmodus) this.kart.tegnHinderlys(samla);
@@ -547,6 +580,7 @@ class VindApp {
             this.panel.tegn({
                 punkt: state.punkt, resultat, samandrag, samlaStoy, avkorta,
                 radiusM: state.radiusM, overflateKoyrer: this.overflateKoyrer,
+                panoramaKoyrer: this.panoramaKoyrer,
             });
             this.kart.tegnSiktlinjer(state.punkt, resultat);
             this._tegnHinderlys();
@@ -674,6 +708,7 @@ class VindApp {
             avkorta: this.sistAvkorta,
             radiusM: state.radiusM,
             overflateKoyrer: this.overflateKoyrer,
+            panoramaKoyrer: this.panoramaKoyrer,
         });
     }
 
@@ -847,6 +882,7 @@ class VindApp {
             punkt, resultat: liste, samandrag, samlaStoy,
             avkorta: this.sistAvkorta, radiusM: state.radiusM,
             overflateKoyrer: this.overflateKoyrer,
+            panoramaKoyrer: this.panoramaKoyrer,
         });
         this.kart.tegnSiktlinjer(punkt, liste);
         this._tegnHinderlys();
@@ -922,7 +958,13 @@ class VindApp {
      */
     async visPanorama() {
         const punkt = state.punkt;
-        if (!punkt) return;
+        if (!punkt || this.panoramaKoyrer) return;
+
+        // Sperr «Vis 3D-panorama» til scena er oppe (ei kald henting tek
+        // 10-60 s). Flagget vert lese av _samandragHtml, så knappen står som
+        // «Byggjer …» også om panelet vert teikna på nytt undervegs.
+        this.panoramaKoyrer = true;
+        this._tegnPanelPaaNytt();
 
         const start = performance.now();
         const trengHorisont = !harHorisont(punkt);
@@ -1117,6 +1159,9 @@ class VindApp {
             );
         } catch (e) {
             Toast.error('Klarte ikkje hente horisont: ' + e.message);
+        } finally {
+            this.panoramaKoyrer = false;
+            this._tegnPanelPaaNytt();
         }
     }
 
