@@ -695,21 +695,27 @@ export const CONFIG = {
              * Kvar ring får eige zoomnivå, valt som det HØGASTE som held seg
              * innanfor flisbudsjettet sitt. Ved 64° nord landar det på:
              *
-             *   0–900 m     z=16   ~1,0 m/px   ~56 flisar   (einskildtre synlege)
-             *   0–4 km      z=14   ~4,2 m/px   ~72 flisar
-             *   0–20 km     z=12   ~17 m/px   ~121 flisar
+             *   0–400 m     z=18   ~0,26 m/px  ~170 flisar  (einskildtre skarpe)
+             *   0–3 km      z=15   ~2,1 m/px   ~145 flisar
+             *   0–20 km     z=12   ~17 m/px    ~110 flisar
              *
-             * Til saman ~250 flisar á ~16 KB ≈ 4 MB. Ringane overlappar med
-             * vilje — den ytre dekkjer heile scenen og er den einaste som MÅ
-             * lukkast; dei indre er reine forbetringar som kan falle bort kvar
-             * for seg utan at noko vert borte.
+             * Til saman ~400–450 flisar (mot ~250 før — nærfeltet gjekk frå
+             * z16 til z18). Esri sitt World_Imagery har ekte dekning til z18
+             * over det meste av fastlands-Noreg (z19 er tomt oppatt-skalert).
+             * Budsjettmekanismen tek høgde for at cos(lat) gjer flistalet
+             * større mot nord: eit punkt på 71° N landar på z17 i nærringen
+             * der eit på 60° N får z18.
+             *
+             * Ringane overlappar med vilje — den ytre dekkjer heile scenen og
+             * er den einaste som MÅ lukkast; dei indre er reine forbetringar
+             * som kan falle bort kvar for seg utan at noko vert borte.
              *
              * `radiusM: null` = «heilt ut til `maksAvstandM`».
              */
             ringar: [
-                { radiusM: 900,   maksFlisar: 64 },
-                { radiusM: 4000,  maksFlisar: 100 },
-                { radiusM: null,  maksFlisar: 144 },
+                { radiusM: 400,   maksFlisar: 300 },
+                { radiusM: 3000,  maksFlisar: 150 },
+                { radiusM: null,  maksFlisar: 150 },
             ],
 
             /**
@@ -720,7 +726,7 @@ export const CONFIG = {
              * på 58° og 71° nord.
              */
             minZoom: 9,
-            maksZoom: 16,
+            maksZoom: 18,
 
             /** Øvre kant for lerretstorleik, av omsyn til GPU-teksturgrenser. */
             maksPiksel: 4096,

@@ -84,11 +84,19 @@ export class MapManager {
         const flybilete = L.layerGroup([
             L.tileLayer(
                 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                { maxZoom: 19, attribution: 'Kjelde: Esri' },
+                {
+                    // Esri sitt World_Imagery har ekte dekning til z18 over det
+                    // meste av fastlands-Noreg; z19 kjem tilbake som ei generisk
+                    // oppatt-skalert flis. Hent z18 og la Leaflet skalere vidare,
+                    // så me slepp gråe hol på djup zoom.
+                    maxNativeZoom: 18,
+                    maxZoom: CONFIG.map.maxOppskalertZoom,
+                    attribution: 'Kjelde: Esri',
+                },
             ),
             L.tileLayer(
                 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-                { maxZoom: 19 },
+                { maxNativeZoom: 18, maxZoom: CONFIG.map.maxOppskalertZoom },
             ),
         ]);
 
