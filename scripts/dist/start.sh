@@ -52,7 +52,55 @@ if command -v curl >/dev/null 2>&1; then
 elif command -v wget >/dev/null 2>&1; then
 	wget -q -O /dev/null "$URL" 2>/dev/null && opptatt=1
 fi
-[ -n "$opptatt" ] && stopp "Noko svarar allereie på port $PORT. Lat att den andre serveren, eller start med ein annan port:  VIND_PORT=8012 ./start.sh"
+
+if [ -n "$opptatt" ]; then
+	# Kven held porten? `lsof -ti` finst på både Linux og macOS.
+	pids=""
+	command -v lsof >/dev/null 2>&1 && pids=$(lsof -ti "tcp:$PORT" -sTCP:LISTEN 2>/dev/null)
+
+	# Er alle lyttarane vår eigen frankenphp? Berre då er det trygt å tilby
+	# å stoppe han — porten kan like gjerne vere teken av noko heilt anna.
+	vaar=1
+	if [ -n "$pids" ]; then
+		for p in $pids; do
+			case "$(ps -p "$p" -o comm= 2>/dev/null)" in
+				*frankenphp*) : ;;
+				*) vaar="" ;;
+			esac
+		done
+	else
+		vaar=""
+	fi
+
+	if [ -n "$vaar" ] && [ -t 0 ]; then
+		echo >&2
+		echo "── Ein annan «frankenphp» (PID $pids) køyrer alt på port $PORT." >&2
+		printf "   Stoppe han og starte på nytt? [j/N] " >&2
+		read -r svar
+		case "$svar" in
+			j|J|ja|JA|y|Y)
+				kill $pids 2>/dev/null
+				# Vent til porten faktisk er slept (maks ~5 s), elles SIGKILL.
+				i=0
+				while [ "$i" -lt 10 ]; do
+					sleep 0.5
+					kill -0 $pids 2>/dev/null || break
+					i=$((i + 1))
+				done
+				kill -0 $pids 2>/dev/null && kill -9 $pids 2>/dev/null
+				sleep 1
+				echo "   Stoppa. Held fram." >&2
+				;;
+			*)
+				stopp "Avbrote. Start med ein annan port:  VIND_PORT=8012 ./start.sh"
+				;;
+		esac
+	else
+		hint="Lat att den andre serveren, eller start med ein annan port:  VIND_PORT=8012 ./start.sh"
+		[ -n "$pids" ] && hint="Prosessen som held porten: PID $pids  (stopp med:  kill $pids ).  Eller: VIND_PORT=8012 ./start.sh"
+		stopp "Noko svarar allereie på port $PORT.  $hint"
+	fi
+fi
 
 # --- Turbindata -----------------------------------------------------
 # Følgjer normalt med pakka. Manglar fila (t.d. sletta for å tvinge ei
