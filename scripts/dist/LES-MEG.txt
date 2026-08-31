@@ -57,6 +57,16 @@ Windows: får du feilmelding om at «VCRUNTIME140.dll manglar», installer
 Microsoft Visual C++ Redistributable (x64) frå microsoft.com og prøv igjen.
 Dei fleste Windows 10/11-maskiner har han alt.
 
+Linux/macOS: lukkar terminalvindauget seg med ein gong og nettlesaren
+opnar seg ikkje, køyr «./start.sh» frå ein terminal du opna sjølv — då
+blir feilmeldinga ståande. Vanlege årsaker:
+  * «frankenphp» mista køyre-retten i utpakkinga — skriptet prøver å
+    setje han sjølv; går ikkje det:  chmod +x frankenphp
+  * noko brukar allereie port 8011 — start med ein annan:
+    VIND_PORT=8012 ./start.sh
+  * pakka er berre delvis pakka ut — sjekk at frankenphp, Caddyfile,
+    php.ini, index.html og mappene js/ css/ backend/ ligg saman.
+
 
 OPPDATERE TURBINDATA
 --------------------

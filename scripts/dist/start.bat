@@ -29,3 +29,9 @@ REM Opne nettlesaren etter 4 sekund, i bakgrunnen, saa serveren rekk aa bli klar
 start "" /b cmd /c "timeout /t 4 /nobreak >nul & start "" http://localhost:8011"
 
 frankenphp.exe run --config Caddyfile
+
+REM Kjem vi hit, stoppa serveren (eller starta aldri). Lat vindauget staa
+REM saa ei eventuell feilmelding over er lesbar etter eit dobbeltklikk.
+echo.
+echo Serveren er stoppa.
+pause
