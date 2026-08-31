@@ -156,7 +156,7 @@
 
 <!-- ===================== Info-modal ===================== -->
 <div id="info-modal" class="modal">
-    <div class="modal-boks" role="dialog" aria-modal="true" aria-labelledby="info-tittel">
+    <div class="modal-boks" role="dialog" aria-modal="true" aria-labelledby="info-tittel" tabindex="-1">
         <div class="modal-topp">
             <h2 id="info-tittel">Om modellen</h2>
             <button type="button" class="ikonknapp" data-action="veksle-info" aria-label="Lukk">
@@ -164,7 +164,7 @@
             </button>
         </div>
 
-        <div class="modal-innhald">
+        <div class="modal-innhald" tabindex="0">
             <h3>Kva appen gjer</h3>
             <p>
                 Du set eit punkt i kartet. Appen finn alle vindturbinar innanfor den valde radiusen,

@@ -393,7 +393,7 @@ class VindApp {
                     break;
 
                 case 'veksle-info':
-                    $('info-modal')?.classList.toggle('open');
+                    this._vekslInfoModal();
                     break;
 
                 case 'oppdater-turbindata':
@@ -461,14 +461,19 @@ class VindApp {
         /**
          * Info-modalen lukkast med Escape og med klikk på det mørke bakteppet —
          * begge er forventa for ein modal, og X-knappen åleine er ikkje nok.
+         * Tab held seg innanfor dialogen medan han er open (fokusfelle).
          */
         const infoModal = $('info-modal');
         infoModal?.addEventListener('click', (e) => {
-            if (e.target === infoModal) infoModal.classList.remove('open');
+            if (e.target === infoModal) this._lukkInfoModal();
         });
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && infoModal?.classList.contains('open')) {
-                infoModal.classList.remove('open');
+            if (!infoModal?.classList.contains('open')) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this._lukkInfoModal();
+            } else if (e.key === 'Tab') {
+                this._fangFokus(infoModal, e);
             }
         });
 
@@ -562,6 +567,57 @@ class VindApp {
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.adressesok')) lukk();
         });
+    }
+
+    // ------------------------------------------------------------- info-modal
+
+    /** Opne eller lukke «Om modellen»-modalen. */
+    _vekslInfoModal() {
+        const m = $('info-modal');
+        if (!m) return;
+        if (m.classList.contains('open')) this._lukkInfoModal();
+        else this._opneInfoModal();
+    }
+
+    _opneInfoModal() {
+        const m = $('info-modal');
+        if (!m) return;
+        // Kven som opna, so fokus kan leggjast tilbake dit ved lukking.
+        this._infoModalUtloysar = document.activeElement;
+        m.classList.add('open');
+        // Fokuser sjølve dialogen, so skjermlesaren les tittelen og Tab
+        // deretter går til X-knappen / det rullbare innhaldet.
+        m.querySelector('.modal-boks')?.focus();
+    }
+
+    _lukkInfoModal() {
+        const m = $('info-modal');
+        if (!m) return;
+        m.classList.remove('open');
+        this._infoModalUtloysar?.focus?.();
+        this._infoModalUtloysar = null;
+    }
+
+    /** Synlege, fokuserbare element inne i eit vindauge. */
+    _fokuserbare(rot) {
+        return [...rot.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )].filter((el) => el.offsetParent !== null);
+    }
+
+    /** Hald Tab-fokus innanfor `rot` (fokusfelle for modal). */
+    _fangFokus(rot, e) {
+        const f = this._fokuserbare(rot);
+        if (f.length === 0) { e.preventDefault(); return; }
+        const fyrst = f[0];
+        const sist = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === fyrst) {
+            e.preventDefault();
+            sist.focus();
+        } else if (!e.shiftKey && document.activeElement === sist) {
+            e.preventDefault();
+            fyrst.focus();
+        }
     }
 
     _byggStatusFilter() {

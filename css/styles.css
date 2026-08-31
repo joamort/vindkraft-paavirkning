@@ -1027,6 +1027,10 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
     box-shadow: var(--skugge-stor);
 }
 
+/* Fokuserast berre programmatisk ved opning — ingen synleg ring på sjølve boksen. */
+.modal-boks:focus { outline: none; }
+.modal-innhald:focus-visible { outline: 2px solid var(--primaer); outline-offset: -2px; }
+
 .modal-topp {
     display: flex;
     justify-content: space-between;
@@ -1093,6 +1097,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
     box-shadow: var(--skugge-stor);
     animation: toast-inn 0.25s ease;
     max-width: 90vw;
+    cursor: pointer;
 }
 
 .toast.success { background: #15803d; }
