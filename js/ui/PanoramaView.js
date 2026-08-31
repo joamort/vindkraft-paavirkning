@@ -1291,48 +1291,68 @@ export class PanoramaView {
         }
         if (punkt.length === 0) return;
 
+        /**
+         * SLÅ SAMAN NABOMARKØRAR I NÆRFELTET.
+         *
+         * Topp-K legg dei avgjerande hinderpunkta 30–300 m frå auget (§23), og
+         * fleire turbinar deler ofte den same skogkanten der. Fem markørar
+         * spreidde over 20 m, kvar mange grader brei sett så nære, vert til ein
+         * vegg — nettopp det biletet brytaren skal FORKLARE, ikkje gøyme. Vi
+         * held den næraste i kvar ~6°-sektor og droppar resten; det er same
+         * skogkant uansett.
+         */
+        punkt.sort((p, q) => p.d - q.d);
+        const behaldne = [];
         for (const c of punkt) {
+            const az = Math.atan2(Math.sin(c.a), Math.cos(c.a));
+            const kollisjon = behaldne.some((b) => {
+                let d = Math.abs(az - b._az);
+                if (d > Math.PI) d = 2 * Math.PI - d;
+                return d < 6 * DEG && Math.abs(c.d - b.d) < Math.max(60, c.d * 0.5);
+            });
+            if (!kollisjon) behaldne.push({ ...c, _az: az });
+        }
+
+        for (const c of behaldne) {
             const a = c.a;
             const senkC = horisontfall(c.d) + this.augeMoh;
-            const yBotn = c.dtmZ - senkC;
             const yTopp = c.domZ - senkC;
-            const h = yTopp - yBotn;
-            if (!(h > 0)) continue;
+            const hEkte = c.domZ - c.dtmZ;
+            if (!(hEkte > 0)) continue;
 
-            const b = Math.max(10, Math.min(60, c.d * 0.08));
-            const geo = new T.BoxGeometry(b, h, b);
             /**
-             * `depthWrite: true` sjølv om materialet er gjennomsiktig.
-             *
-             * Standardrådet for transparente flater er det motsette, fordi
-             * dei då ikkje sorterer seg rett mot kvarandre. Her er den feilen
-             * den minste: utan djupneskriving vert klumpane teikna OPPÅ
-             * terrenget dei står bak, og ein klump 3 km ute svevar då framfor
-             * åsen som skjuler han. Det ville ikkje sett ut som eit unøyaktig
-             * bilete, men som ein feil.
+             * MARKØR, IKKJE MÅLESTOKK (§24). Storleiken på boksen er ikkje ei
+             * måling — vi kjenner HØGDA i eitt punkt, ikkje kvar det står tre.
+             * Ein ekte-høgd boks 30 m unna spenner 40–50° og vegger att heile
+             * utsynet. Vi klemmer difor både høgd og breidd til ein roleg
+             * vinkelstorleik (~8°), forankra i toppen av det målte hinderet
+             * (det er skoglinja som betyr noko). Fjernmarkørane er små uansett
+             * og får stå med ekte høgd.
              */
+            const h = Math.min(hEkte, c.d * 0.14);
+            const b = Math.max(4, Math.min(36, c.d * 0.045));
+            const geo = new T.BoxGeometry(b, h, b);
+
             const mat = new T.MeshLambertMaterial({
-                color: 0x1f5c3a,
+                color: 0x2f6d4a,
                 transparent: true,
-                /**
-                 * DEI NÆRE KLUMPANE MÅ VERE MEIR GJENNOMSIKTIGE.
-                 *
-                 * Nærfeltet er der eit hinder betyr mest (H/d), så det er
-                 * DER kandidatane hopar seg opp — på Odal ni klumpar 30 m
-                 * unna, kvar 15° brei, som til saman vert ein vegg. Med same
-                 * dekkevne som ein klump 3 km ute ville brytaren skjult
-                 * nettopp det biletet han skal forklare. Dekkevna følgjer
-                 * difor avstanden, slik at samla dekkevne vert nokolunde lik.
-                 */
-                opacity: 0.55 * Math.max(0.42, Math.min(1, c.d / 300)),
+                // Nærmarkørane hopar seg opp — hald dei svake så dei ikkje vert
+                // ein vegg. Fjernare markørar tåler meir dekkevne.
+                opacity: 0.34 * Math.max(0.32, Math.min(1, c.d / 500)),
+                // depthWrite: elles svevar ein markør 3 km ute framfor åsen som
+                // skjuler han. Sorteringsfeil mellom to markørar er mindre ille.
                 depthWrite: true,
             });
             const boks = new T.Mesh(geo, mat);
-            boks.position.set(c.d * Math.sin(a), yBotn + h / 2, -c.d * Math.cos(a));
+            boks.position.set(c.d * Math.sin(a), yTopp - h / 2, -c.d * Math.cos(a));
 
             const kant = new T.LineSegments(
                 new T.EdgesGeometry(geo),
-                new T.LineBasicMaterial({ color: 0x8ff0bd, transparent: true, opacity: 0.9 }),
+                new T.LineBasicMaterial({
+                    color: 0x6fd6a0,
+                    transparent: true,
+                    opacity: 0.3 * Math.max(0.4, Math.min(1, c.d / 500)),
+                }),
             );
             boks.add(kant);
 
