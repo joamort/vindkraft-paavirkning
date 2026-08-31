@@ -25,6 +25,17 @@ export function escHtml(value) {
 export const $ = (id) => document.getElementById(id);
 
 /**
+ * Sett av/på-tilstanden til ein brytar-knapp: både den visuelle `.aktiv`-klassa
+ * og `aria-pressed`, slik at skjermlesarar høyrer om t.d. «Anleggsområde» eller
+ * «Hinderlys» er på. Éin stad, so dei to aldri kjem ut av takt.
+ */
+export function settBrytar(el, paa) {
+    if (!el) return;
+    el.classList.toggle('aktiv', paa);
+    el.setAttribute('aria-pressed', String(Boolean(paa)));
+}
+
+/**
  * Formater avstand med fornuftig presisjon: meter under 1 km, elles km.
  */
 export function fmtAvstand(meter) {

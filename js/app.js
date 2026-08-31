@@ -29,7 +29,7 @@ import {
     sjekkOverflate, overflateSamandrag, kanEndrastAvOverflate,
 } from './utils/SurfaceCheck.js';
 import {
-    escHtml, fmtDato, fmtAvstand, fmtDb, fmtMoh, fmtTimar, $, debounce,
+    escHtml, fmtDato, fmtAvstand, fmtDb, fmtMoh, fmtTimar, $, debounce, settBrytar,
 } from './utils/dom.js';
 import { initErrorReporter } from './utils/ErrorReporter.js';
 import { PanoramaView } from './ui/PanoramaView.js';
@@ -244,7 +244,7 @@ class VindApp {
             this.kart.skjulSynlegheitskart();
             this._zviPaa = false;
             $('zvi-teiknforklaring').hidden = true;
-            knapp?.classList.remove('aktiv');
+            settBrytar(knapp, false);
             if (knapp) knapp.innerHTML = '<i class="fa-solid fa-border-all"></i> Vis synlegheitskart';
             return;
         }
@@ -257,7 +257,7 @@ class VindApp {
         const ok = await this._byggOgTegnZvi(knapp);
         if (ok) {
             this._zviPaa = true;
-            knapp?.classList.add('aktiv');
+            settBrytar(knapp, true);
             if (knapp) knapp.innerHTML = '<i class="fa-solid fa-border-all"></i> Skjul synlegheitskart';
         }
     }
@@ -266,6 +266,8 @@ class VindApp {
         if (knapp) {
             knapp.disabled = false;
             knapp.innerHTML = '<i class="fa-solid fa-border-all"></i> Vis synlegheitskart';
+            // Idle/av-tilstand. Success-vegen set den til «på» like etterpå.
+            if (!this._zviPaa) settBrytar(knapp, false);
         }
     }
 
@@ -346,7 +348,7 @@ class VindApp {
                 case 'bakgrunn':
                     this.kart.settBakgrunn(el.dataset.lag);
                     document.querySelectorAll('[data-action="bakgrunn"]')
-                        .forEach((b) => b.classList.toggle('aktiv', b === el));
+                        .forEach((b) => settBrytar(b, b === el));
                     break;
 
                 case 'min-posisjon':
@@ -355,7 +357,7 @@ class VindApp {
 
                 case 'veksle-omrader':
                     this.visOmrader = !this.visOmrader;
-                    el.classList.toggle('aktiv', this.visOmrader);
+                    settBrytar(el, this.visOmrader);
                     this._tegnOmrader();
                     break;
 
@@ -378,6 +380,7 @@ class VindApp {
                     // Ein sysken-selektor kjem ikkje til: panelet står ETTER
                     // kartområdet i DOM-en.
                     document.body.classList.toggle('panel-skjult', Boolean(skjult));
+                    el.setAttribute('aria-expanded', String(!skjult));
                     break;
                 }
 
@@ -442,6 +445,8 @@ class VindApp {
          */
         document.addEventListener('keydown', (e) => {
             if (!state.kandidat) return;
+            // Er info-modalen open, eig Escape lukkinga hennar (handtert under).
+            if ($('info-modal')?.classList.contains('open')) return;
             const iSkjema = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName);
             if (iSkjema) return;
             if (e.key === 'Enter') {
@@ -450,6 +455,20 @@ class VindApp {
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 this.avbrytKandidat();
+            }
+        });
+
+        /**
+         * Info-modalen lukkast med Escape og med klikk på det mørke bakteppet —
+         * begge er forventa for ein modal, og X-knappen åleine er ikkje nok.
+         */
+        const infoModal = $('info-modal');
+        infoModal?.addEventListener('click', (e) => {
+            if (e.target === infoModal) infoModal.classList.remove('open');
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && infoModal?.classList.contains('open')) {
+                infoModal.classList.remove('open');
             }
         });
 
@@ -1478,7 +1497,7 @@ class VindApp {
     vekslNattmodus(knapp) {
         const paa = !this.kart.nattmodus;
         this.kart.settNattmodus(paa);
-        knapp?.classList.toggle('aktiv', paa);
+        settBrytar(knapp, paa);
         this._tegnHinderlys();
 
         if (paa && !state.punkt) {

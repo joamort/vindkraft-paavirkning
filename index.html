@@ -54,7 +54,8 @@
             <i class="fa-solid fa-circle-info"></i><span>Om modellen</span>
         </button>
         <button type="button" class="knapp berre-mobil" data-action="veksle-panel"
-                aria-label="Vis/skjul panel" title="Vis/skjul panelet">
+                aria-label="Vis/skjul panel" aria-controls="sidepanel" aria-expanded="true"
+                title="Vis/skjul panelet">
             <i class="fa-solid fa-bars"></i>
         </button>
     </div>
@@ -95,9 +96,9 @@
             <div class="kontrollgruppe">
                 <span class="kontroll-tittel">Bakgrunn</span>
                 <div class="knapperad">
-                    <button type="button" class="minknapp aktiv" data-action="bakgrunn" data-lag="topo">Topo</button>
-                    <button type="button" class="minknapp" data-action="bakgrunn" data-lag="gratone">Gråtone</button>
-                    <button type="button" class="minknapp" data-action="bakgrunn" data-lag="flybilete">Flyfoto</button>
+                    <button type="button" class="minknapp aktiv" data-action="bakgrunn" data-lag="topo" aria-pressed="true">Topo</button>
+                    <button type="button" class="minknapp" data-action="bakgrunn" data-lag="gratone" aria-pressed="false">Gråtone</button>
+                    <button type="button" class="minknapp" data-action="bakgrunn" data-lag="flybilete" aria-pressed="false">Flyfoto</button>
                 </div>
             </div>
 
@@ -112,7 +113,7 @@
             <div class="kontrollgruppe">
                 <span class="kontroll-tittel">Vis status</span>
                 <div id="status-filter" class="status-filter"></div>
-                <button type="button" class="minknapp brei aktiv" data-action="veksle-omrader">
+                <button type="button" class="minknapp brei aktiv" data-action="veksle-omrader" aria-pressed="true">
                     <i class="fa-solid fa-draw-polygon"></i> Anleggsområde
                 </button>
             </div>
@@ -120,6 +121,7 @@
             <div class="kontrollgruppe">
                 <span class="kontroll-tittel">Synlegheitskart</span>
                 <button type="button" class="minknapp brei" id="zvi-knapp" data-action="veksle-synlegheitskart"
+                        aria-pressed="false"
                         title="Fargelegg eit lite rutenett rundt punktet etter kor mange turbinar som er synlege frå kvar rute">
                     <i class="fa-solid fa-border-all"></i> Vis synlegheitskart
                 </button>
@@ -128,7 +130,7 @@
 
             <div class="kontrollgruppe">
                 <span class="kontroll-tittel">Natt</span>
-                <button type="button" class="minknapp brei" data-action="veksle-natt"
+                <button type="button" class="minknapp brei" data-action="veksle-natt" aria-pressed="false"
                         title="Vis dei påbodne hinderlysa slik dei ville stått mot ein mørk himmel">
                     <i class="fa-solid fa-moon"></i> Hinderlys
                 </button>

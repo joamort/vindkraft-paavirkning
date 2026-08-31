@@ -54,7 +54,7 @@
  */
 
 import { CONFIG } from '../config.js';
-import { escHtml, $, fmtAvstand } from '../utils/dom.js';
+import { escHtml, $, fmtAvstand, settBrytar } from '../utils/dom.js';
 import { horisontfall } from '../utils/geo.js';
 import { solposisjon, norskUtcOffsetTimar } from '../utils/ShadowFlicker.js';
 import { uvIRing } from '../utils/SatelliteTexture.js';
@@ -1783,9 +1783,10 @@ export class PanoramaView {
                 <div class="panorama-knapperad">
                     <button type="button" class="minknapp" data-panorama="no">No</button>
                     <button type="button" class="minknapp" data-panorama="natt">Natt</button>
-                    <button type="button" class="minknapp aktiv" data-panorama="rotor">Rotor</button>
+                    <button type="button" class="minknapp aktiv" data-panorama="rotor" aria-pressed="true">Rotor</button>
                     <button type="button" class="minknapp${this.visSkog ? ' aktiv' : ''}"
                             id="panorama-skog-knapp" data-panorama="skog"
+                            aria-pressed="${this.visSkog ? 'true' : 'false'}"
                             title="Klipp turbinane mot overflatemodellen (skog og bygningar) i staden for bar bakke">
                         <i class="fa-solid fa-tree"></i> Skog
                     </button>
@@ -1877,7 +1878,7 @@ export class PanoramaView {
         }
 
         this.visSkog = !this.visSkog;
-        el.classList.toggle('aktiv', this.visSkog);
+        settBrytar(el, this.visSkog);
         this._byggTurbinarPaaNytt();
 
         this.settStatus(this.visSkog
@@ -1956,7 +1957,7 @@ export class PanoramaView {
                     break;
                 case 'rotor':
                     this.rotorGaar = !this.rotorGaar;
-                    el.classList.toggle('aktiv', this.rotorGaar);
+                    settBrytar(el, this.rotorGaar);
                     break;
                 case 'skog':
                     this._vekslSkog(el);
