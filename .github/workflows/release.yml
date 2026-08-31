@@ -24,7 +24,7 @@ jobs:
   turbincache:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
@@ -34,7 +34,7 @@ jobs:
         run: |
           php cron/fetch_turbines.php
           ls -la cache/*.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: turbincache
           path: |
@@ -69,10 +69,10 @@ jobs:
             archive: zip
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Hent den ferdigbygde turbin-cachen
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: turbincache
           path: cache
