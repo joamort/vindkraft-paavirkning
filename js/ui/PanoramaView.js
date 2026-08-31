@@ -1371,7 +1371,12 @@ export class PanoramaView {
                 opacity: 0,
             });
             const sprite = new T.Sprite(mat);
-            sprite.position.y = r.bakkeVedTurbinMoh + l.hoydeOverBakkeM - senk;
+            // Toppmerkinga sit på NACELLETOPPEN (§ 3 f.), ikkje i navsenteret.
+            // Modellen legg `hoydeOverBakkeM` til navhøgda; her løftar me sprita
+            // opp forbi nacellekassa (halvhøgd ≈ rotorR·0,05) og navkula, så
+            // lyset les som eit punkt OPPÅ rotorhuset og ikkje nede på tårnet.
+            const nacelleLoft = l.rolle === 'topp' ? (r.rotorDiameterM / 2) * 0.10 : 0;
+            sprite.position.y = r.bakkeVedTurbinMoh + l.hoydeOverBakkeM - senk + nacelleLoft;
 
             // Vinkelstorleik: eit lyspunkt er punktforma, men lys smører seg
             // utover i auget. Sterkare lys ⇒ større flekk.
