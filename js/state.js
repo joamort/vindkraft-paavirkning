@@ -10,6 +10,7 @@
 
 import { CONFIG } from './config.js';
 import { kanFlyttast, erJustert, flyttTurbin, tilbakestillTurbin } from './utils/TurbinJustering.js';
+import { kanEndrastAvKvaOm, settKvaOmStorleik, tilbakestillKvaOmStorleik } from './utils/TurbinScenario.js';
 
 /** Enkel observerbar tilstand med emne-baserte lyttarar. */
 class AppState {
@@ -183,6 +184,41 @@ class AppState {
     /** @returns {object[]} Turbinar brukaren har flytta i denne økta. */
     justerteTurbinar() {
         return this.turbinar.filter(erJustert);
+    }
+
+    /**
+     * Prøv ein hypotetisk turbinstorleik for HEILE anlegget (TurbinScenario.js).
+     * Gjeld alle turbinane som deler `anleggsnr` — ein vindpark byggjer ikkje
+     * ulike modellar om kvarandre, så eit scenario vald for éin turbin skal
+     * synast for naboane hans òg.
+     *
+     * @param {number} anleggsnr
+     * @param {{mw:number, nav:number, rotor:number}} scenario
+     * @returns {object[]} Dei oppdaterte turbinane (tom liste om ingen kunne endrast)
+     */
+    settKvaOmStorleik(anleggsnr, scenario) {
+        const endra = [];
+        this.turbinar = this.turbinar.map((t) => {
+            if (t.anleggsnr !== anleggsnr || !kanEndrastAvKvaOm(t)) return t;
+            const ny = settKvaOmStorleik(t, scenario);
+            endra.push(ny);
+            return ny;
+        });
+        if (endra.length) this._varsle('turbinscenario', endra);
+        return endra;
+    }
+
+    /** Set turbinstorleiken for heile anlegget tilbake til appens eige estimat. */
+    tilbakestillKvaOmStorleik(anleggsnr) {
+        const endra = [];
+        this.turbinar = this.turbinar.map((t) => {
+            if (t.anleggsnr !== anleggsnr) return t;
+            const ny = tilbakestillKvaOmStorleik(t);
+            if (ny !== t) endra.push(ny);
+            return ny;
+        });
+        if (endra.length) this._varsle('turbinscenario', endra);
+        return endra;
     }
 
     /** @param {{lat:number, lon:number}|null} kandidat */

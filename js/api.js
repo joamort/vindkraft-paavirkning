@@ -71,8 +71,23 @@ export async function hentOmrader() {
  */
 export async function hentHoyde(lat, lon) {
     const url = `${CONFIG.api.hoydepunkt}?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
-    const respons = await fetch(url);
-    return lesJson(respons, 'Høgdedata');
+    const start = performance.now();
+    console.log(`[api] hentHoyde: sender ${url}`);
+    try {
+        const respons = await fetch(url);
+        console.log(`[api] hentHoyde: svar HTTP ${respons.status} etter ${Math.round(performance.now() - start)} ms`);
+        const data = await lesJson(respons, 'Høgdedata');
+        console.log('[api] hentHoyde: ferdig', data);
+        return data;
+    } catch (e) {
+        // Logg ALLTID her, sjølv om kallaren si eiga catch(e) òg gjer det —
+        // dette er den einaste staden som veit KOR LENGE kallet hadde stått
+        // (nyttig for å skilje eit tregt/hengande nettverkskall frå ein rask
+        // HTTP-feil). Fetch() sjølv har ingen tidsavgrensing, så eit kall som
+        // aldri får svar frå serveren heng her for alltid utan dette.
+        console.error(`[api] hentHoyde feila etter ${Math.round(performance.now() - start)} ms:`, e);
+        throw e;
+    }
 }
 
 /**
