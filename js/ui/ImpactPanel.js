@@ -15,8 +15,10 @@ import { stoykategori, formaterStoy } from '../utils/NoiseModel.js';
 import { magnitudeTekst } from '../utils/ObstacleLights.js';
 import { MANADER, dagTilDato } from '../utils/ShadowFlicker.js';
 import { JUSTERT_KILDE } from '../utils/TurbinJustering.js';
+import { kanEndrastAvKvaOm, KVA_OM_KILDE, STORLEIK_SCENARIO } from '../utils/TurbinScenario.js';
 import { overflateSamandrag, kanEndrastAvOverflate } from '../utils/SurfaceCheck.js';
 import { ProfileChart } from './ProfileChart.js';
+import { Toast } from './Toast.js';
 
 /** Ikon per synlegheitskategori. */
 const SYNLEG_IKON = {
@@ -49,12 +51,31 @@ const SPENN_ETIKETT = {
 /**
  * Kva me kan seie om turbinmåla for eitt resultat.
  *
- * To tilfelle: `kjent_soknad` (tala er lesne ut av eit offentleg søknads- eller
- * meldingsdokument, og kjelda skal visast) og `estimert` (rekna ut frå
- * merkeeffekt). Skiljet må vere synleg i UI — det er forskjellen på eit tal
- * nokon har søkt om og eit tal me har gjetta oss til.
+ * Tre tilfelle: `kjent_soknad` (tala er lesne ut av eit offentleg søknads-
+ * eller meldingsdokument, og kjelda skal visast), `estimert` (rekna ut frå
+ * merkeeffekt) og `kva_om` (eit hypotetisk scenario BRUKAREN sjølv har vald,
+ * sjå TurbinScenario.js) — kvart tilfelle må seiast klart frå kvarandre: det
+ * er skilnaden på eit tal nokon har søkt om, eit tal me har gjetta oss til,
+ * og eit tal brukaren sjølv prøver seg fram med.
  */
 function malOpplysning(r) {
+    // r.malKilde, IKKJE erKvaOm(r): den funksjonen les turbin.mal_kilde
+    // (snake_case, som TurbinScenario.js sjølv og state.turbinar bruker) — eit
+    // resultatobjekt frå ImpactCalculator har feltet i camelCase. Same
+    // skilnad som _justertPosisjonHtml() under handterer ved å samanlikne
+    // r.posisjonKilde direkte i staden for å kalle erJustert().
+    if (r.malKilde === KVA_OM_KILDE) {
+        return {
+            merkeKlasse: 'merke-kvaom',
+            merkeTekst: 'kva om',
+            spennTekst: null,
+            kjeldeHtml: '',
+            atterhald: `Dette er eit <strong>«kva om»-scenario du sjølv har vald</strong> — ikkje
+                        appens eige estimat og ikkje eit omsøkt tal. Sjå boksen øvst for å
+                        nullstille.`,
+        };
+    }
+
     if (r.malKilde !== 'kjent_soknad' || !r.malKjeldeUrl) {
         return {
             merkeKlasse: 'merke-estimat',
@@ -152,6 +173,19 @@ export class ImpactPanel {
                     break;
                 case 'sjekk-overflate':
                     this.handlingar.paaSjekkOverflate?.();
+                    break;
+                case 'kva-om-bruk': {
+                    const vel = $('kva-om-vel');
+                    if (!vel) break;
+                    if (vel.value === '') {
+                        Toast.info('Vel ein storleik i lista først.');
+                        break;
+                    }
+                    this.handlingar.paaKvaOmBruk?.(Number(el.dataset.anleggsnr), Number(vel.value));
+                    break;
+                }
+                case 'kva-om-nullstill':
+                    this.handlingar.paaKvaOmNullstill?.(Number(el.dataset.anleggsnr));
                     break;
                 case 'del-lenke':
                     this.handlingar.paaDelLenke?.();
@@ -262,10 +296,22 @@ export class ImpactPanel {
             return;
         }
         el.classList.add('synleg');
+        /**
+         * EITT STEG (t.d. eitt høgdeoppslag) HAR INGEN MEININGSFULL BRØK.
+         *
+         * «0 av 1» endrar seg aldri før han plutseleg vert borte, og ei
+         * stolpe fest på 0 % ser identisk ut anten kallet tek 2 eller 20
+         * sekund — verifisert i praksis at akkurat det leste som «har stoppa
+         * opp». Med berre eitt steg droppar me difor brøken og viser ei
+         * GLIDANDE stripe i staden for éi frose på 0 %: begge seier «i
+         * arbeid», ingen av dei påstår ei framdrift me ikkje kjenner.
+         */
+        const eittSteg = totalt <= 1;
         const prosent = totalt > 0 ? Math.round((ferdig / totalt) * 100) : 0;
         el.innerHTML = `
-            <div class="framdrift-tekst">${escHtml(tekst)} … ${ferdig} av ${totalt}</div>
-            <div class="framdrift-spor"><div class="framdrift-fyll" style="width:${prosent}%"></div></div>`;
+            <div class="framdrift-tekst">${escHtml(tekst)}${eittSteg ? '' : ` … ${ferdig} av ${totalt}`}</div>
+            <div class="framdrift-spor"><div class="framdrift-fyll${eittSteg ? ' framdrift-ubestemt' : ''}"
+                 ${eittSteg ? '' : `style="width:${prosent}%"`}></div></div>`;
     }
 
     skjulFramdrift() {
@@ -927,6 +973,7 @@ export class ImpactPanel {
             ${this._overflateDetaljHtml(r, opts.overflateKoyrer)}
             ${naerskjerming}
             ${this._justertPosisjonHtml(r)}
+            ${this._kvaOmBoksHtml(r)}
 
             <div class="graf-boks">
                 <canvas id="profil-graf" aria-label="Høgdeprofil mellom punktet og turbinen"></canvas>
@@ -961,7 +1008,8 @@ export class ImpactPanel {
                     · totalhøgd ${Math.round(r.totalhoydeM)} m
                     ${r.effektMw ? `<span class="hint">${r.effektMw} MW per turbin</span>` : ''}
                     ${mal.spennTekst ? `<span class="hint">${escHtml(mal.spennTekst)}</span>` : ''}
-                    ${mal.kjeldeHtml}</dd>
+                    ${mal.kjeldeHtml}
+                    ${this._kvaOmVelgHtml(r)}</dd>
 
                 <dt>Eigar</dt>
                 <dd>${r.eier ? escHtml(r.eier) : '<span class="hint">Ikkje oppgitt i NVE-datasettet</span>'}
@@ -1051,6 +1099,72 @@ export class ImpactPanel {
                 <button type="button" class="knapp knapp-liten" data-action="tilbakestill-posisjon"
                         data-id="${escHtml(r.id)}">
                     <i class="fa-solid fa-rotate-left"></i> Tilbakestill til appens estimat
+                </button>
+            </div>`;
+    }
+
+    // -------------------------------------------- detalj: «kva om»-turbinstorleik
+
+    /**
+     * «Du ser på eit kva om-scenario», i same stil og same plassering som
+     * `_justertPosisjonHtml()` — av same grunn: alt under denne boksen
+     * (synleg del, støy, hinderlys) er rekna med DEN hypotetiske storleiken,
+     * ikkje appens eige estimat, og det må stå tydeleg FØR tala, ikkje gøymt
+     * nede blant atterhalda.
+     */
+    _kvaOmBoksHtml(r) {
+        if (r.malKilde !== KVA_OM_KILDE) return '';
+
+        return `
+            <div class="kvaom-boks">
+                <div class="kvaom-topp">
+                    <i class="fa-solid fa-flask"></i>
+                    <strong>Kva om-scenario: ${r.effektMw} MW, ${Math.round(r.navHoydeM)}/${Math.round(r.rotorDiameterM)} m</strong>
+                </div>
+                <p class="kvaom-tekst">
+                    Alle tala under gjeld denne hypotetiske turbinstorleiken for
+                    <strong>heile anlegget</strong>, ikkje appens eige estimat
+                    (${Math.round(r.opphavlegNavHoydeM ?? r.navHoydeM)}/${Math.round(r.opphavlegRotorDiameterM ?? r.rotorDiameterM)} m).
+                    Dette er di eiga utforsking — ingen har søkt om denne storleiken — og
+                    forsvinn når du lastar sida på nytt.
+                </p>
+                <button type="button" class="knapp knapp-liten" data-action="kva-om-nullstill"
+                        data-anleggsnr="${escHtml(r.anleggsnr)}">
+                    <i class="fa-solid fa-rotate-left"></i> Tilbake til appens estimat
+                </button>
+            </div>`;
+    }
+
+    /**
+     * Vel-og-bruk-kontrollen i Turbinmål-rada. Gjeld berre anlegg under
+     * handsaming (TurbinScenario.js sitt `PLANLAGT_STATUS`) — eit anlegg i
+     * drift har alt bestemt kva som er bygd, og eit scenario der ville vore
+     * ei påstand appen ikkje kan stå for.
+     */
+    _kvaOmVelgHtml(r) {
+        if (r.malKilde === KVA_OM_KILDE || !kanEndrastAvKvaOm(r)) return '';
+
+        const opts = STORLEIK_SCENARIO
+            .map((s, i) => `<option value="${i}">${s.mw} MW · ${Math.round(s.nav)}/${Math.round(s.rotor)} m</option>`)
+            .join('');
+
+        return `
+            <div class="kvaom-velg">
+                <select id="kva-om-vel" class="vel" aria-label="Vel hypotetisk turbinstorleik">
+                    <!--
+                      Tomt standardval, med vilje. Detaljvisinga kan bli teikna på
+                      nytt UNDER brukarens val — DOM-kryssjekken (§22) køyrer
+                      automatisk og byter ut heile #detalj-panel når svaret
+                      kjem. Utan ein tom standard ville det nullstilt valet til
+                      FYRSTE rad (3,6 MW) usynleg for brukaren, og eit trykk
+                      rett etterpå ville brukt feil scenario utan varsel.
+                    -->
+                    <option value="" selected disabled>Vel storleik …</option>
+                    ${opts}
+                </select>
+                <button type="button" class="knapp knapp-liten" data-action="kva-om-bruk"
+                        data-anleggsnr="${escHtml(r.anleggsnr)}">
+                    <i class="fa-solid fa-flask"></i> Kva om …
                 </button>
             </div>`;
     }

@@ -12,6 +12,7 @@ import { CONFIG } from '../config.js';
 import { escHtml, fmtAvstand } from '../utils/dom.js';
 import { hinderlysKrav } from '../utils/ObstacleLights.js';
 import { kanFlyttast, erJustert } from '../utils/TurbinJustering.js';
+import { stoyRadiusM } from '../utils/NoiseModel.js';
 
 /** Farge på siktlinjer etter synlegheitskategori. */
 const LINJEFARGE = {
@@ -20,6 +21,16 @@ const LINJEFARGE = {
     saa_vidt: '#ca8a04',
     skjult: '#94a3b8',
     ukjent: '#cbd5e1',
+};
+
+/**
+ * Fargar for støykonturane, keyed på dei same to tersklane som resten av
+ * støymodellen bruker (CONFIG.stoy.terskelHoyDb/terskelLavDb) — ikkje eigne
+ * tal, så ei endring av tersklane der ikkje kan gløymast her.
+ */
+const STOYKONTUR_STIL = {
+    [CONFIG.stoy.terskelHoyDb]: { farge: '#dc2626', dashArray: null }, // L_den 45 — rettleiande grense (T-1442)
+    [CONFIG.stoy.terskelLavDb]: { farge: '#f59e0b', dashArray: '5 5' }, // L_den 40 — god margin til grensa
 };
 
 export class MapManager {
@@ -35,6 +46,7 @@ export class MapManager {
         this.bakgrunnslag = {};
         this.turbinLag = null;      // MarkerClusterGroup
         this.omradeLag = null;      // LayerGroup med polygon
+        this.stoykonturLag = null;  // LayerGroup med L_den-ringar
         this.siktlinjeLag = null;   // LayerGroup med linjer
         this.hinderlysLag = null;   // LayerGroup med lyspunkt
         this.punktMarkor = null;      // analysert punkt
@@ -63,6 +75,14 @@ export class MapManager {
 
         L.control.zoom({ position: 'bottomright' }).addTo(this.kart);
 
+        /**
+         * `crossOrigin: true` på ALLE flislaga — verifisert med curl at alle
+         * fire flisservarane svarer `Access-Control-Allow-Origin: *`, same
+         * sjekk som grunngir Esri-teksturen i panoramaet (§17). Kostar
+         * ingenting (flisane var alt offentlege og token-lause), men gjer at
+         * skjermbilete-eksporten (html2canvas) kan lese pikslane i staden for
+         * å teikne eit tomt/tainta lerret der flisane skulle vore.
+         */
         // Kartverket topo som standard — det er norsk terreng me analyserer,
         // og topografiske fliser gjer terrengforma lesbar direkte på kartet.
         const topo = L.tileLayer(
@@ -71,6 +91,7 @@ export class MapManager {
                 maxNativeZoom: CONFIG.map.maxNativeZoom,
                 maxZoom: CONFIG.map.maxOppskalertZoom,
                 attribution: '© Kartverket',
+                crossOrigin: true,
             },
         );
         const gratone = L.tileLayer(
@@ -79,6 +100,7 @@ export class MapManager {
                 maxNativeZoom: CONFIG.map.maxNativeZoom,
                 maxZoom: CONFIG.map.maxOppskalertZoom,
                 attribution: '© Kartverket',
+                crossOrigin: true,
             },
         );
         const flybilete = L.layerGroup([
@@ -92,11 +114,12 @@ export class MapManager {
                     maxNativeZoom: 18,
                     maxZoom: CONFIG.map.maxOppskalertZoom,
                     attribution: 'Kjelde: Esri',
+                    crossOrigin: true,
                 },
             ),
             L.tileLayer(
                 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-                { maxNativeZoom: 18, maxZoom: CONFIG.map.maxOppskalertZoom },
+                { maxNativeZoom: 18, maxZoom: CONFIG.map.maxOppskalertZoom, crossOrigin: true },
             ),
         ]);
 
@@ -110,6 +133,9 @@ export class MapManager {
         this.omradeFramhevLag = L.featureGroup().addTo(this.kart);
         // Lokalt synlegheitskart (ZVI) — under siktlinjene så dei ikkje druknar.
         this.synlegheitskartLag = L.featureGroup().addTo(this.kart);
+        // Støykonturane er kontekst, ikkje resultat — under siktlinjene av
+        // same grunn.
+        this.stoykonturLag = L.featureGroup().addTo(this.kart);
         this.siktlinjeLag = L.featureGroup().addTo(this.kart);
 
         /**
@@ -501,6 +527,43 @@ export class MapManager {
 
     skjulSynlegheitskart() {
         this.synlegheitskartLag?.clearLayers();
+    }
+
+    /**
+     * Støykonturar: L_den 45/40 dB-ringar rundt kvar turbin i det analyserte
+     * settet (CLAUDE.md §9, TODO). Reint ei teikning av tal modellen alt har
+     * — same lydeffekt (`r.lydeffektDba`) som talet i sidepanelet, berre løyst
+     * ut som ein avstand i staden for eitt svar for éin observatør. Sjå
+     * `stoyRadiusM()` i NoiseModel.js.
+     *
+     * @param {object[]} resultat
+     */
+    tegnStoykonturar(resultat) {
+        this.stoykonturLag.clearLayers();
+        if (!resultat) return;
+
+        for (const r of resultat) {
+            if (!Number.isFinite(r.lydeffektDba)) continue;
+            const antallTurbiner = r.representererTurbiner ?? 1;
+
+            for (const [terskelStr, stil] of Object.entries(STOYKONTUR_STIL)) {
+                const radius = stoyRadiusM(r.lydeffektDba, Number(terskelStr), antallTurbiner);
+                if (radius === null) continue;
+                this.stoykonturLag.addLayer(L.circle([r.lat, r.lon], {
+                    radius,
+                    color: stil.farge,
+                    weight: 1.5,
+                    opacity: 0.6,
+                    fill: false,
+                    dashArray: stil.dashArray,
+                    interactive: false,
+                }));
+            }
+        }
+    }
+
+    skjulStoykonturar() {
+        this.stoykonturLag?.clearLayers();
     }
 
     /**

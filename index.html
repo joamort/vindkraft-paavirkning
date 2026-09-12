@@ -22,12 +22,12 @@
         <i class="fa-solid fa-fan"></i>
         <div>
             <h1>Vindkraft-påverknad <span id="app-versjon" class="app-versjon"></span></h1>
-            <span id="datakjelde" class="datakjelde">lastar …</span>
+            <span id="datakjelde" class="datakjelde"><i class="fa-solid fa-spinner fa-spin"></i> lastar turbindata …</span>
         </div>
     </div>
 
     <div class="adressesok">
-        <i class="fa-solid fa-magnifying-glass"></i>
+        <i class="fa-solid fa-magnifying-glass" id="adresse-ikon"></i>
         <input type="search" id="adresse-input" placeholder="Søk adresse …"
                autocomplete="off" spellcheck="false" aria-label="Søk etter adresse"
                aria-expanded="false" aria-controls="adresse-treff" role="combobox">
@@ -48,6 +48,10 @@
         <button type="button" class="knapp" data-action="eksporter-alle"
                 title="Last ned heile (statusfiltrerte) turbindatasettet som KML — uavhengig av analyse">
             <i class="fa-solid fa-earth-europe"></i><span>Alle turbinar (KML)</span>
+        </button>
+        <button type="button" class="knapp" data-action="skjermbilete-kart"
+                title="Last ned eit PNG-bilete av kartutsnittet slik det ser ut no">
+            <i class="fa-solid fa-camera"></i><span>Skjermbilete</span>
         </button>
         <button type="button" class="knapp" data-action="veksle-info"
                 title="Kva modellen kan og ikkje kan">
@@ -126,6 +130,14 @@
                     <i class="fa-solid fa-border-all"></i> Vis synlegheitskart
                 </button>
                 <div id="zvi-teiknforklaring" class="zvi-teiknforklaring" hidden></div>
+            </div>
+
+            <div class="kontrollgruppe">
+                <span class="kontroll-tittel">Støy</span>
+                <button type="button" class="minknapp brei" data-action="veksle-stoykonturar" aria-pressed="false"
+                        title="Ring rundt kvar turbin der L_den fell til 45 og 40 dB — ubeskjerma, jf. T-1442">
+                    <i class="fa-solid fa-volume-high"></i> Vis støykonturar
+                </button>
             </div>
 
             <div class="kontrollgruppe">

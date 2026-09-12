@@ -99,6 +99,61 @@ export function samletStoy(lpNivaaer) {
 }
 
 /**
+ * Løys ut avstanden der L_den fell til `terskelDb`, for éin turbin (eller eit
+ * plassholderpunkt som representerer fleire).
+ *
+ * Dette er inversen av `turbinStoy()` sitt L_p-uttrykk — men uttrykket har
+ * BÅDE eit logaritmisk ledd (sfærisk spreiing) og eit lineært (luftabsorpsjon)
+ * i avstanden, så det finst ingen lukka løysing. `L_p(d)` er strengt avtakande
+ * i d (begge ledd trekk nivået ned når d aukar), så det finst akkurat éin rot,
+ * og bisecting finn han greitt — 40 iterasjonar gir sub-millimeter presisjon
+ * over heile det praktiske området.
+ *
+ * Konturen er UBESKJERMA (`navSynleg: true`, inga skjerming) og bruker
+ * horisontal avstand direkte (null høgdeskilnad) — same føresetnad som
+ * kalibreringa i CLAUDE.md §9 («L_den 45 dB-konturen rundt éin 3,6 MW-turbin
+ * hamnar på ~600 m»). Det er ein sirkel på KARTET, ikkje eit svar for éin
+ * bestemt observatør — høgdeforskjellen mellom nav og eit vilkårleg punkt på
+ * ringen er ukjend og ville uansett variert rundt heile omkretsen.
+ *
+ * @param {number} lydeffektDba
+ * @param {number} terskelDb Ønska L_den-nivå (t.d. `CONFIG.stoy.terskelHoyDb`)
+ * @param {number} [antallTurbiner]
+ * @returns {number|null} Radius i meter, eller `null` om terskelen anten er
+ *                         nådd alt ved 1 m (urealistisk høg lydeffekt) eller
+ *                         aldri nås innanfor det praktiske området.
+ */
+export function stoyRadiusM(lydeffektDba, terskelDb, antallTurbiner = 1) {
+    const lpMaal = terskelDb - S.ldenPaaslagDb; // L_den → L_p
+    const lpVed = (d) => turbinStoy({
+        lydeffektDba,
+        horisontalAvstandM: d,
+        navHoydeMoh: 0,
+        oyreHoydeMoh: 0,
+        navSynleg: true,
+        skjulhoydeM: 0,
+        antallTurbiner,
+    }).lpDb;
+
+    // Aldri når terskelen i det heile — ikkje eingong 1 m unna. Uråkeleg med
+    // dei Lwa-verdiane appen faktisk brukar (klemt til [95, 108] dB i
+    // TurbineSpec.php), men funksjonen skal svare rett uansett kva han vert
+    // kalla med.
+    if (lpVed(1) <= lpMaal) return null;
+
+    const YTTERGRENSE_M = 20_000; // godt utanfor der modellen har noko meining (§9)
+    if (lpVed(YTTERGRENSE_M) > lpMaal) return null;
+
+    let lo = 1;
+    let hi = YTTERGRENSE_M;
+    for (let i = 0; i < 40; i++) {
+        const mid = (lo + hi) / 2;
+        if (lpVed(mid) > lpMaal) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+}
+
+/**
  * Formater eit L_den-nivå for vising.
  *
  * Under rapporteringsgolvet (sjå CONFIG.stoy.rapporteringsgolvDb) gir eit

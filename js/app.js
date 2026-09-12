@@ -25,6 +25,7 @@ import { hinderlysKrav } from './utils/ObstacleLights.js';
 import { haversine } from './utils/geo.js';
 import { byggSoltabell, skyggekastForAlle, maksSkyggeavstandM } from './utils/ShadowFlicker.js';
 import { erJustert, avstandUtanforPlanomrade } from './utils/TurbinJustering.js';
+import { STORLEIK_SCENARIO } from './utils/TurbinScenario.js';
 import {
     sjekkOverflate, overflateSamandrag, kanEndrastAvOverflate,
 } from './utils/SurfaceCheck.js';
@@ -58,6 +59,11 @@ class VindApp {
             paaFotomontasje: () => this.visFotomontasje(),
             paaTilbakestillPosisjon: (id) => this.tilbakestillTurbinPosisjon(id),
             paaSjekkOverflate: () => this.kjoerOverflatesjekk(),
+            paaKvaOmBruk: (anleggsnr, indeks) => {
+                const scenario = STORLEIK_SCENARIO[indeks];
+                if (scenario) this.veljKvaOmStorleik(anleggsnr, scenario);
+            },
+            paaKvaOmNullstill: (anleggsnr) => this.tilbakestillKvaOmStorleik(anleggsnr),
             // Flytta hit frå topplinja: dei gir berre meining med eit resultat.
             paaDelLenke: () => this.delLenke(),
             paaEksporterAnalyse: () => this.eksporterAnalyserteKml(),
@@ -160,6 +166,10 @@ class VindApp {
             // resten, og fullstendig stille i web-versjonen.
             this._sjekkSjolvhostVarsel(data.generert);
         } catch (e) {
+            // Utan dette står spinneren i #datakjelde og går for alltid —
+            // ei stille evig-lasting er verre enn ei tydeleg feilmelding.
+            const el = $('datakjelde');
+            if (el) el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> fekk ikkje lasta turbindata';
             Toast.error(e.message);
             console.error(e);
         }
@@ -262,6 +272,37 @@ class VindApp {
         }
     }
 
+    // ------------------------------------------------------------ støykonturar
+
+    /**
+     * Slå støykonturane (L_den 45/40 dB-ringar) av/på. Heilt synkron — dei er
+     * berre ei teikning av tal `state.resultat` alt har (`r.lydeffektDba`),
+     * ingen nye kall og ingen ny berekning. Sjå MapManager `tegnStoykonturar()`.
+     */
+    vekslStoykonturar(knapp) {
+        if (this._stoykonturPaa) {
+            this._stoykonturPaa = false;
+            this.kart.skjulStoykonturar();
+            settBrytar(knapp, false);
+            return;
+        }
+
+        if (state.resultat.length === 0) {
+            Toast.info('Analyser eit punkt først.');
+            return;
+        }
+
+        this._stoykonturPaa = true;
+        this.kart.tegnStoykonturar(state.resultat);
+        settBrytar(knapp, true);
+    }
+
+    /** Kalla saman med tegnSiktlinjer() — same livssyklus, berre valfri. */
+    _tegnStoykonturar() {
+        if (!this._stoykonturPaa) return;
+        this.kart.tegnStoykonturar(state.resultat);
+    }
+
     _zviKnappStandard(knapp) {
         if (knapp) {
             knapp.disabled = false;
@@ -337,6 +378,11 @@ class VindApp {
             if (e.target.closest?.('[data-action="vis-panorama"]')) {
                 this.panorama.forhandslast();
             }
+            // Same idé for html2canvas (§ skjermbilete-eksport under) — ~46 KB
+            // gzipa som berre skal lastast for den som faktisk peikar mot knappen.
+            if (e.target.closest?.('[data-action="skjermbilete-kart"]')) {
+                this._lastHtml2Canvas().catch(() => {});
+            }
         }, { passive: true });
 
         // Éin delegert lyttar for heile appskallet.
@@ -392,6 +438,10 @@ class VindApp {
                     this.eksporterAlleKml();
                     break;
 
+                case 'skjermbilete-kart':
+                    this.eksporterSkjermbilete();
+                    break;
+
                 case 'veksle-info':
                     this._vekslInfoModal();
                     break;
@@ -406,6 +456,10 @@ class VindApp {
 
                 case 'veksle-synlegheitskart':
                     this.vekslSynlegheitskart(el);
+                    break;
+
+                case 'veksle-stoykonturar':
+                    this.vekslStoykonturar(el);
                     break;
 
                 default:
@@ -523,12 +577,26 @@ class VindApp {
             felt.setAttribute('aria-expanded', 'true');
         };
 
+        // Ikonet til venstre i feltet er den einaste plassen ei ventetid kan
+        // visast — resultatlista SKAL stå urørt (den førre søkjeteksten sine
+        // treff) heilt til dei nye kjem, elles blafrar ho tom for kvart tastetrykk.
+        // Utan spinneren ser eit tregt kall ut som eit tastetrykk appen ignorerte.
+        const ikon = $('adresse-ikon');
         const sok = debounce(async () => {
             const q = felt.value.trim();
             if (q.length < 3) { lukk(); return; }
             avbrytar?.abort();
-            avbrytar = new AbortController();
-            const treff = await sokAdresse(q, avbrytar.signal);
+            // Eiga tilvising til akkurat DENNE kontrolleren — held ho unna
+            // det delte `avbrytar`-feltet, som eit nyare søk alt kan ha bytt
+            // ut når dette kallet vender tilbake frå eit avbrote fetch().
+            // Utan denne sjekken kunne det gamle kallet sin rydde-runde slått
+            // spinneren av MEDAN det nye søket framleis venta.
+            const eigen = new AbortController();
+            avbrytar = eigen;
+            if (ikon) ikon.className = 'fa-solid fa-spinner fa-spin';
+            const treff = await sokAdresse(q, eigen.signal);
+            if (avbrytar !== eigen) return; // eit nyare søk har alt teke over
+            if (ikon) ikon.className = 'fa-solid fa-magnifying-glass';
             if (felt.value.trim() === q) tegn(treff);
         }, 250);
 
@@ -721,12 +789,53 @@ class VindApp {
 
         // Hent bakkehøgda før analysen — heile siktlinjeberekninga hengjer på
         // den, så me har ikkje noko å rekne med utan.
+        //
+        // Dette kallet ligg FØR analysen si eiga framdriftslinje (som fyrst
+        // dukkar opp inne i analyser(), etter at høgda er i hus). Utan denne
+        // linja her stod panelet urørt — framleis det gamle resultatet, eller
+        // tomtilstanden — gjennom heile nettverkskallet, og eit stadfesta
+        // klikk (eller eit adressetreff, eller ei delt lenke, eller GPS-en)
+        // såg ut som det ikkje gjorde noko. Same framdrift-boks, berre eit
+        // steg tidlegare og med sin eigen tekst.
+        this.panel.visFramdrift(0, 1, 'Hentar terrenghøgd');
+        console.log(`[settPunkt] startar hentHoyde(${lat}, ${lon})`);
+
+        /**
+         * TIKKANDE SEKUNDTAL, IKKJE BERRE STATISK TEKST.
+         *
+         * Verifisert i praksis (§ denne samtalen): eit kaldt Kartverket-oppslag
+         * kan ta fleire sekund uansett — det er ikkje eit hòl i appen, det er
+         * verkeleg nettverkstid. Men «Hentar terrenghøgd» som står HEILT stille
+         * ser identisk ut anten kallet er sekund 2 eller heilt daudt, og fekk
+         * nettopp deg til å tru det hadde stoppa opp. Eit tal som beveger seg
+         * er den billegaste måten å skilje «trege» frå «daud» på — ingen ny
+         * infrastruktur, berre eit `setInterval` som skriv over same teksten.
+         */
+        const framdriftStart = performance.now();
+        const framdriftTikk = setInterval(() => {
+            const sekund = Math.round((performance.now() - framdriftStart) / 1000);
+            const hint = sekund >= 8 ? ' — Kartverket kan vere tregt akkurat no, ver tolmodig' : '';
+            this.panel.visFramdrift(0, 1, `Hentar terrenghøgd (${sekund} s)${hint}`);
+        }, 1000);
+
         let hoyde = null;
         try {
             hoyde = await hentHoyde(lat, lon);
+            console.log('[settPunkt] hentHoyde ferdig, går vidare til analyser()', hoyde);
         } catch (e) {
+            this.panel.skjulFramdrift();
+            // Manglde her før — feilen synte seg berre som ein Toast, aldri i
+            // konsollen. `hentHoyde()` i api.js loggar òg (med tidsbruk), men
+            // denne fanger tilfelle der noko ANNA (t.d. state.settPunkt under)
+            // kastar før analyser() i det heile vert kalla.
+            console.error('[settPunkt] feila:', e);
             Toast.error(`Fekk ikkje henta terrenghøgd: ${e.message}`);
             return;
+        } finally {
+            // MÅ rydde her, ikkje berre i try/catch-greinene: elles tikkar
+            // teljaren vidare oppå analyser() si eiga framdriftslinje, som tek
+            // over #framdrift rett etterpå.
+            clearInterval(framdriftTikk);
         }
 
         state.settPunkt({
@@ -798,6 +907,9 @@ class VindApp {
         );
 
         if (iRadius.length === 0) {
+            // Ingen batch å streame framdrift for — men settPunkt() har
+            // alt vist «Hentar terrenghøgd», så den må lukkast her òg.
+            this.panel.skjulFramdrift();
             this.sistAvkorta = false;
             state.settResultat([], byggSamandrag([]), null);
             this.panel.tegn({
@@ -805,6 +917,7 @@ class VindApp {
                 samlaStoy: null, avkorta: false, radiusM: state.radiusM,
             });
             this.kart.tegnSiktlinjer(state.punkt, []);
+            this._tegnStoykonturar();
             return;
         }
 
@@ -835,6 +948,7 @@ class VindApp {
             });
             this.kart.tegnSiktlinjer(state.punkt, samla);
             if (this.kart.nattmodus) this.kart.tegnHinderlys(samla);
+            this._tegnStoykonturar();
         }, 120);
 
         try {
@@ -866,6 +980,7 @@ class VindApp {
             });
             this.kart.tegnSiktlinjer(state.punkt, resultat);
             this._tegnHinderlys();
+            this._tegnStoykonturar();
 
             const utanProfil = resultat.filter((r) => !r.analysert).length;
             if (utanProfil > 0) {
@@ -1133,6 +1248,59 @@ class VindApp {
         this._settOppdatertResultat([...utan, nytt], nytt.id);
     }
 
+    // ------------------------------------------------- «kva om»-turbinstorleik
+
+    /**
+     * Prøv ein hypotetisk turbinstorleik for HEILE anlegget denne turbinen
+     * høyrer til (TurbinScenario.js).
+     *
+     * INGEN NYE TERRENGOPPSLAG. Ei storleiksendring flyttar ikkje turbinen —
+     * siktlinja mellom punktet og kvar turbin er uendra, så den alt henta
+     * profilen (`r.profil`, sjå ImpactCalculator sitt returobjekt) er framleis
+     * gyldig. Heile omrekninga er difor synkron og lokal, ulikt
+     * `reanalyserTurbin()` som MÅ hente ein ny profil fordi posisjonen endra
+     * seg.
+     *
+     * @param {number} anleggsnr
+     * @param {{mw:number, nav:number, rotor:number}} scenario
+     */
+    veljKvaOmStorleik(anleggsnr, scenario) {
+        if (!state.punkt) return;
+        const endra = state.settKvaOmStorleik(anleggsnr, scenario);
+        if (endra.length === 0) return;
+        this._reanalyserAnlegg(anleggsnr, endra);
+        Toast.success(`Kva om-scenario brukt på ${endra.length} turbin${endra.length === 1 ? '' : 'ar'}: `
+            + `${scenario.mw} MW, ${Math.round(scenario.nav)}/${Math.round(scenario.rotor)} m.`);
+    }
+
+    /** Set turbinstorleiken for heile anlegget tilbake til appens eige estimat. */
+    tilbakestillKvaOmStorleik(anleggsnr) {
+        if (!state.punkt) return;
+        const endra = state.tilbakestillKvaOmStorleik(anleggsnr);
+        if (endra.length === 0) return;
+        this._reanalyserAnlegg(anleggsnr, endra);
+        Toast.info('Sett tilbake til appens eige estimat.');
+    }
+
+    /**
+     * Rekn om att alle turbinane i `turbinar` (alle same anlegg), med
+     * profilane dei alt har frå det siste analyserte settet. Turbinar som
+     * ikkje var med i settet (utanfor radius/statusfilter) eller aldri fekk
+     * ein profil i utgangspunktet, vert ikkje rørte.
+     */
+    _reanalyserAnlegg(anleggsnr, turbinar) {
+        const punkt = state.punkt;
+        const utan = state.resultat.filter((r) => r.anleggsnr !== anleggsnr);
+        const nye = [];
+        for (const t of turbinar) {
+            const gamalt = state.finnResultat(t.id);
+            if (!gamalt) continue;
+            nye.push(gamalt.profil ? beregnPaaverknad({ punkt, turbin: t, profil: gamalt.profil }) : gamalt);
+        }
+        const uendra = state.resultat.filter((r) => r.anleggsnr === anleggsnr && !nye.some((n) => n.id === r.id));
+        this._settOppdatertResultat([...utan, ...nye, ...uendra], state.valdTurbinId);
+    }
+
     /**
      * Set eit endra resultatsett og teikn alt som heng på det.
      *
@@ -1171,6 +1339,7 @@ class VindApp {
         });
         this.kart.tegnSiktlinjer(punkt, liste);
         this._tegnHinderlys();
+        this._tegnStoykonturar();
 
         if (veljId) {
             const r = state.finnResultat(veljId);
@@ -1649,6 +1818,74 @@ class VindApp {
         const kml = byggKmlAlleTurbinar(state.turbinar, state.statusFilter);
         lastNedFil('vindturbinar-noreg.kml', kml);
         Toast.success('Eksporterte heile datasettet til KML.');
+    }
+
+    // -------------------------------------------------------- skjermbilete
+
+    /**
+     * Hent html2canvas — først når nokon faktisk ber om eit skjermbilete.
+     *
+     * Same grunngjeving som Three.js i PanoramaView (§16/§21): ~46 KB gzipa
+     * er bortkasta for dei som aldri trykkjer på knappen. Skilnaden er at
+     * html2canvas berre finst som eit UMD-bygg (ingen ESM-variant på cdnjs),
+     * så `import()` fungerer ikkje her — han vert i staden lasta med ein
+     * injisert <script>-tagg, og resultatet er den globale `window.html2canvas`.
+     * Promiset er memoisert av same grunn som `_lastThree()`: hovring OG klikk
+     * kallar denne uavhengig av kvarandre, ofte samtidig.
+     */
+    _lastHtml2Canvas() {
+        if (window.html2canvas) return Promise.resolve(window.html2canvas);
+        if (!this._html2canvasPromise) {
+            this._html2canvasPromise = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                s.onload = () => resolve(window.html2canvas);
+                s.onerror = () => reject(new Error('biblioteket lét seg ikkje laste — er du på nett?'));
+                document.head.appendChild(s);
+            }).catch((e) => {
+                // Nullstill, slik at eit nytt forsøk faktisk får prøve.
+                this._html2canvasPromise = null;
+                throw e;
+            });
+        }
+        return this._html2canvasPromise;
+    }
+
+    /**
+     * Last ned eit PNG-bilete av akkurat det som står i kartcontaineren no —
+     * fliser, turbinar, siktlinjer, støykonturar, alt saman flata til eitt
+     * bilete. Fangar berre `#kart` sjølv, ikkje søskenelementet
+     * `.kart-kontrollar` (den flytande kontrollboksen) — som gir eit reint
+     * kartbilete utan appens eige UI oppå.
+     *
+     * `crossOrigin: true` på alle flislaga (MapManager `init()`) er det som
+     * gjer at html2canvas i det heile kan lese pikslane deira — verifisert med
+     * curl at alle fire flisservarane svarer `Access-Control-Allow-Origin: *`.
+     */
+    async eksporterSkjermbilete() {
+        if (this._skjermbileteKoyrer) return;
+        const knapp = document.querySelector('[data-action="skjermbilete-kart"]');
+        const ikon = knapp?.querySelector('i');
+        const opphavlegIkon = ikon?.className;
+        this._skjermbileteKoyrer = true;
+        if (knapp) knapp.disabled = true;
+        if (ikon) ikon.className = 'fa-solid fa-spinner fa-spin';
+
+        try {
+            const html2canvas = await this._lastHtml2Canvas();
+            const kartEl = $('kart');
+            const canvas = await html2canvas(kartEl, { useCORS: true, backgroundColor: null, logging: false });
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) throw new Error('tomt bilete');
+            lastNedFil('vindkraft-kart.png', blob, 'image/png');
+            Toast.success('Skjermbilete lasta ned.');
+        } catch (e) {
+            Toast.error(`Klarte ikkje lage skjermbilete: ${e.message}`);
+        } finally {
+            this._skjermbileteKoyrer = false;
+            if (knapp) knapp.disabled = false;
+            if (ikon && opphavlegIkon) ikon.className = opphavlegIkon;
+        }
     }
 
     // ------------------------------------------------------------ PDF-rapport

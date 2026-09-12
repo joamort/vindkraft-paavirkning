@@ -1469,36 +1469,56 @@ nettlesaren, ikkje ein kopi. Node er berre eit dev-verktøy her.
 
 ## TODO / neste fasar
 
-- **Fase 4 (resten):** PWA/offline for turbinlaget, rå skjermbilete-eksport av
-  kartet (PDF-rapporten §28 og delbar lenke `?lat=&lon=&r=` er på plass).
-- **2-punkts-kalibrering for fotomontasjen (§30):** kan brukaren peike ut to
-  turbinar han kjenner att i fotoet, kan (sikt-retning, grader-per-piksel)
-  løysast eksakt i staden for å stillast med slidere.
+- **Fase 4 (resten):** PWA/offline for turbinlaget (rå skjermbilete-eksport av
+  kartet, PDF-rapporten §28 og delbar lenke `?lat=&lon=&r=` er alle på plass —
+  skjermbiletet via html2canvas, lasta seint (fyrst ved bruk) — sjå
+  «Skjermbilete av kartet» i topplinja).
 - **Synlegheitskartet (§29) er lokalt og ei tilnærming.** Eit større / meir
   nøyaktig ZVI måtte hente terrengprofilar per celle — vurder ein billeg
   variant som deler dei lange horisontstrålane frå panoramaet.
 - Skyggekast: vurder eit *faktisk*-estimat med skydekkestatistikk (met.no
-  frost-API har soltimar per stasjon) og vindrose. Modellen reknar berre det
-  teoretiske i dag, og NVE si 8-timarsgrense kan difor ikkje målast mot.
-- **Vindretnings-avhengig støy:** medvind gir merkbart høgare Lp. Ei vindrose
-  (met.no / NVE) + medvind/motvind-verdi ville gjere dB-talet mindre abstrakt.
-  Same vindrose kunne gi ulik langs/tvers-avstand i utplasseringsheuristikken.
-- **Støykonturar på kartet:** L_den 45/40 dB-ringane rundt anlegget (alt
-  kalibrerte i §9) burde teiknast, ikkje berre stå som eitt tal.
+  frost-API har soltimar per stasjon). Modellen reknar berre det teoretiske i
+  dag, og NVE si 8-timarsgrense kan difor ikkje målast mot.
+- **Vindretnings-avhengig støy og vindrose i utplasseringsheuristikken —
+  FORSØKT, IKKJE FUNNE EI HALDBAR KJELDE.** Begge desse to TODO-punkta (no
+  slått saman) føreset ei VINDROSE: retningsfordelt frekvens/styrke, ikkje
+  berre eit gjennomsnittstal. Undersøkt:
+    - NVE sitt «Vindressurser»-lag (som avløyste Landvind) ligg ikkje i
+      `gis3.nve.no` sin ArcGIS-katalog (verifisert: `mapservice`-mappa der har
+      verken «Vindressurser» eller noko liknande namn). Det bur etter alt å
+      døme på `nve.geodataonline.no` saman med `Vindkraft2` — som denne
+      sandkassa ikkje når (DNS-blokkert, kjend frå før, sjå Fallgruver).
+    - Sjølv om tenesta var nåbar: alt funne materiale (NVE sin eigen
+      «Vindkart for Norge»-rapport, blogginnlegget om den nye WMS-en) skildrar
+      eit ÅRSMIDDELVIND-kart — eit tal per punkt, ikkje ei retningsfordelt
+      rose. Å late som appen hadde ei vindrose når kjelda berre gir eitt
+      skalartal, ville vore ei påstand data ikkje held til.
+    - met.no sin frost-API gir vindrosedata, men berre PER MÅLESTASJON — appen
+      opererer på eit vilkårleg klikka punkt kor som helst i Noreg, og næraste
+      stasjon kan liggje langt unna og seie lite om lokal kanalisering i
+      terrenget som faktisk avgjer medvind/motvind der brukaren står.
+  Konklusjon: IKKJE bygg dette utan ei verifisert kjelde med ekte retnings-
+  fordeling for eit vilkårleg punkt. Prøv `nve.geodataonline.no/.../Vindressurser`
+  frå ekte produksjonshosting (utanfor denne sandkassa) neste gong nokon tek
+  tak i dette — det er den einaste ikkje-uttømte tråden.
 - Hinderlys: om Luftfartstilsynet nokon gong publiserer kva anlegg som har fått
   ADLS eller perimetermerking godkjent, kan §10 sitt maksimumsatterhald byttast
   med faktiske data. Per i dag finst ingen slik kjelde.
-- DOM-sjekken har ingen aldersinformasjon om laserdataen. `hoydedata/v1` har eit
-  `/datakilder/{kilde}`-endepunkt med metadata; finst det skanningsår per
-  område der, kan atterhaldet «kan vere fleire år gammal» byttast med ei årstal.
+- **DOM-alder — FORSØKT, AVVIST.** `ws.geonorge.no/hoydedata/v1/datakilder/dtm1`
+  og `/dom1` er verifiserte: dei svarer med ei generisk skildring av HEILE det
+  landsdekkande NHM-datasettet (`beskrivelse`, ein lenke til kartkatalogen),
+  ikkje noko per-punkt eller per-prosjekt skanningsår — `dtm1`/`dom1` ER den
+  samanslåtte nasjonale mosaikken, med vilje utan prosjekt-grenser i sjølve
+  API-et. Det finst ei ANNA teneste med reelle prosjektgrenser og metadata
+  (`hoydedata.no/arcgis/rest/services/metadata_prosjekt/MapServer`), men ho
+  svarer `{"error":{"code":499,"message":"Token Required"}}` — verifisert med
+  curl, same type blokkering som Norge i bilder (§17). Konklusjon: uråkeleg
+  utan eit abonnement appen ikkje har. IKKJE prøv denne vegen på nytt utan eit
+  slikt token.
 - **DOM-klipping i panoramaet:** panoramaets skogbrytar (§24) klipper alt mot
   DOM-horisonten. Same idé kunne gjelde synlegheitskartet (§29) — eit «med
   skog»-lag.
-- Utplassering: heuristikken har ingen vinddata. Ei vindrose (NVE sitt
-  vindressurskart) ville late oss bruke ulik avstand på langs og på tvers av
-  hovudvindretninga, slik verkelege parkar gjer.
-- **Fase 5:** nærare ISO 9613-2, per-turbinmodell lydeffektdata, «kva om»-scenario
-  for turbinstorleik på planlagde anlegg.
+- **Fase 5:** nærare ISO 9613-2, per-turbinmodell lydeffektdata.
 - Vurder å kvalitetssikre dominansterskelane (§4.2) mot ein konkret norsk
   NVE-rettleiar før dei presenterast som meir enn ein heuristikk.
 - Flyfoto (§17): Esri sitt `World_Imagery` har varierande alder og oppløysing i

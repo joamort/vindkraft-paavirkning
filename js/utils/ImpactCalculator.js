@@ -198,6 +198,16 @@ export function beregnPaaverknad({ punkt, turbin, profil }) {
         opphavlegLon: turbin.opphavleg_lon ?? null,
         opphavlegPosisjonKilde: turbin.opphavleg_posisjon_kilde ?? null,
         flyttAvstandM: turbin.flytt_avstand_m ?? null,
+        /**
+         * Same idé, for eit «kva om»-scenario på turbinstorleik i staden for
+         * posisjon (malKilde === 'kva_om') — sjå js/utils/TurbinScenario.js.
+         * Utan desse ville detaljvisinga ikkje kunna seie kva appens EIGE
+         * estimat var før scenarioet vart valt.
+         */
+        opphavlegNavHoydeM: turbin.opphavleg_nav_hoyde_m ?? null,
+        opphavlegRotorDiameterM: turbin.opphavleg_rotor_diameter_m ?? null,
+        opphavlegTotalhoydeM: turbin.opphavleg_totalhoyde_m ?? null,
+        opphavlegEffektMw: turbin.opphavleg_effekt_mw ?? null,
         representererTurbiner: turbin.representerer_turbiner ?? null,
         // Berre sett på punkt med posisjon_kilde === 'estimert_i_omrade'.
         layoutMaal: turbin.layout_maal ?? null,
