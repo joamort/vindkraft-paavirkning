@@ -11,7 +11,8 @@ horisontbelastning, eit lokalt synlegheitskart (ZVI-tilnærming), eit
 eige foto), og ein éin-sides PDF-rapport for punktet.
 
 Arkitektur, datakjelder og modellval: **[PLAN.md](PLAN.md)** og
-**[CLAUDE.md](CLAUDE.md)**.
+**[CLAUDE.md](CLAUDE.md)**. Kva som er endra i kvar utgåve:
+**[CHANGELOG.md](CHANGELOG.md)**.
 
 ![Skjermbilete: analyse frå eit punkt ved Smøla vindkraftverk — 68 av 68
 turbinar synlege, med siktlinjer teikna frå punktet til kvar turbin, og
