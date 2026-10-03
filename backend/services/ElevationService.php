@@ -258,7 +258,10 @@ class ElevationService
             'geojson'  => 'false',
         ]);
 
-        $data = Http::getJson($url, $error, 20);
+        // 30 s, ikkje 20: punkt-API-et har periodar der eitt oppslag tek
+        // 10–15 s (målt 2026-10-03), og då feila 20 s-grensa på kall som
+        // ville ha lukkast. Klienten viser tikkande sekund medan han ventar.
+        $data = Http::getJson($url, $error, 30);
         if ($data === null || empty($data['punkter'][0])) {
             Logger::warn('elevation_point_lookup', 'Kartverket punkt-API feila', ['feil' => $error ?? '?']);
             return null;

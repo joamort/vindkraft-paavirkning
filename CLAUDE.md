@@ -1404,9 +1404,21 @@ JS har no `Cache-Control: no-cache, must-revalidate` i både `.htaccess` og
 `If-Modified-Since`, og under FrankenPHP på begge ETag-variantane — revalidering
 kostar eitt tomt svar per fil.
 
-**`connect-src` lista unpkg og cdnjs utan at noko trong det.** Biblioteka kjem
-inn som `<script>`/`<link>`/`import()`. Testa i nettlesar med berre `'self'`:
-analyse, adressesøk, skjermbilete og 3D-panorama, null CSP-brot.
+**`connect-src` treng unpkg og cdnjs — men berre for utviklarverktøya.** Appen
+sjølv gjer ingen `fetch()` mot dei (testa med berre `'self'`: analyse,
+adressesøk, skjermbilete og 3D-panorama utan CSP-brot). Men med DevTools opne
+hentar Chrome source maps (`leaflet.js.map` o.l.) derifrå, og utan vertane i
+`connect-src` vert konsollen full av raude CSP-feil. Ein runde med berre
+`'self'` (CONFIG-VERSION 4) gav nettopp det, så dei står der att. Dei er
+rein-lese-CDN-ar og opnar ingen veg ut for data.
+
+**Eit feila høgdeoppslag la kartet og panelet ut av takt.** Markøren vart
+flytta før `hentHoyde()`, så ved feil viste kartet det nye punktet og panelet
+det gamle — og ein måtte klikke same stad på nytt for å prøve igjen. No går
+markøren tilbake til punktet resultata gjeld, og staden står att som kandidat
+med «Analyser her». Punkt-API-et fekk 30 s i staden for 20: målt 12–14 s per
+oppslag i periodar (2026-10-03), og då feila 20 s-grensa på kall som ville
+lukkast.
 
 **Rate-limiten trudde på det fyrste leddet i `X-Forwarded-For`.** Fem kall med
 fem ulike headerverdiar gav fem ferske teljarar. `RateLimiter::client()` les no
@@ -1440,6 +1452,10 @@ I frontend, frå same runde:
 - **Desimalkomma** (`fmtTal()` i `dom.js`) i alt som vert VIST, òg
   Chart.js-aksane (`locale: 'nb-NO'`). Koordinatar har med vilje framleis
   punktum: «63,87000, 10,10000» er to tal som ser ut som fire.
+- **Overlegga (panorama, fotomontasje) er `inert` når dei er lukka**, og fokus
+  vert flytta ut FØR `aria-hidden` vert sett (`settOverlegg()` i `dom.js`).
+  Lukka ein med «Lukk»-knappen, blokkerte Chrome `aria-hidden` med ei
+  åtvaring, og kontrollane i den usynlege fotomontasjen kunne nåast med Tab.
 - **Chart.js lastast fyrst når det finst resultat** (69 KB gzipa spart på kvar
   sidevising), med SRI som resten av CDN-innhaldet.
 - **`og:image` peikar på GitHub** (`raw.githubusercontent.com/…/main/assets/
@@ -1564,6 +1580,9 @@ nettlesaren, ikkje ein kopi. Node er berre eit dev-verktøy her.
   littavalt.no var han så høg at kvart flyttal fekk ~50 siffer. `Http.php` set
   han; eit nytt endepunkt som skriv flyttal UTAN å laste `Http.php` må gjere
   det same.
+- **Ikkje stram `connect-src` til berre `'self'`.** Appen klarer seg, men
+  DevTools hentar source maps frå unpkg/cdnjs, og konsollen vert full av
+  CSP-feil (§32).
 - **Ikkje test skrivande endepunkt mot produksjon.** Ein «sjekk om han er
   stengt»-POST mot `refresh_turbines.php` bygde den live cachen på nytt (§32).
   Mot littavalt.no: berre GET.

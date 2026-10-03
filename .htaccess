@@ -1,4 +1,4 @@
-# CONFIG-VERSION: 4 (2026-10-02)
+# CONFIG-VERSION: 5 (2026-10-03)
 # Bump talet over ved kvar endring, slik at filinnhaldet garantert skil seg frå
 # det som alt ligg på server (same konvensjon som PolitiKartet).
 #
@@ -22,15 +22,14 @@
     # style-src treng 'unsafe-inline' fordi Leaflet set style-attributt direkte
     # på kartelementa når det posisjonerer fliser og markørar.
     #
-    # connect-src: berre vårt eige opphav — BOKSTAVLEG, ingen CDN-ar. Alle
-    # eksterne API-kall (NVE, Kartverket WPS) går gjennom PHP-backenden —
-    # nettlesaren snakkar aldri direkte med dei. Biblioteka frå unpkg/cdnjs
-    # kjem inn som <script>, <link> og import(), som alle høyrer til
-    # script-src/style-src; ingenting i appen gjer fetch() mot dei. (Dei to
-    # CDN-vertane stod her til og med versjon 3 utan å trengast. Verifisert i
-    # nettlesar med berre 'self': analyse, adressesøk, skjermbilete og
-    # 3D-panorama gjekk med null CSP-brot.) img-src må derimot tillate
-    # flis-tenarane.
+    # connect-src: vårt eige opphav + dei to CDN-ane. Alle eksterne API-kall
+    # (NVE, Kartverket WPS) går gjennom PHP-backenden — nettlesaren snakkar
+    # aldri direkte med dei. Appen sjølv gjer ingen fetch() mot CDN-ane
+    # (biblioteka kjem inn via script-src/style-src), men utviklarverktøya i
+    # nettlesaren hentar source maps (leaflet.js.map o.l.) derifrå, og utan
+    # dei to vertane her fyller det konsollen med CSP-feil. Versjon 4 prøvde
+    # berre 'self' og fekk nettopp det. Rein-lese-CDN-ar, så dei opnar ingen
+    # veg ut for data. img-src må derimot tillate flis-tenarane.
     #
     # IKKJE FJERN server.arcgisonline.com FRÅ img-src. Han ser ut som eit
     # reint Leaflet-behov (flybilete-bakgrunnslaget i 2D-kartet), men
@@ -41,7 +40,7 @@
     # under connect-src og kravt anten ei CSP-utviding eller ein PHP-proxy.
     # Blir direktivet stramma inn, feilar panoramaet STILLE — det fell tilbake
     # til prosedyrefarge i staden for å gi ein feil.
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com https://services.arcgisonline.com https://unpkg.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com https://services.arcgisonline.com https://unpkg.com; connect-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 </IfModule>
 
 # ============================================================ Tilgangskontroll

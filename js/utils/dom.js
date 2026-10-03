@@ -58,6 +58,37 @@ export function fmtTal(verdi, desimalar) {
 }
 
 /**
+ * Vis eller skjul eit overlegg (3D-panoramaet, fotomontasjen) — òg for
+ * skjermlesarar og tastatur, ikkje berre for auga.
+ *
+ * Overlegga er berre gjennomsiktige når dei er lukka (`opacity: 0`), så
+ * kontrollane inni dei kunne framleis nåast med Tab. `inert` tek dei ut av
+ * både tab-rekkjefølgja og tilgjengetreet.
+ *
+ * Og FOKUSET MÅ UT FØR overlegget vert skjult. Lukkar brukaren med
+ * «Lukk»-knappen, står fokus på han i det `aria-hidden` vert sett, og Chrome
+ * blokkerer då `aria-hidden` med ei åtvaring: skjermlesaren ville stått att på
+ * eit element som ikkje lenger finst. Fokus går difor tilbake til knappen som
+ * opna overlegget — funnen på nytt med `tilbakeTil`, sidan sidepanelet kan ha
+ * teikna han på nytt i mellomtida.
+ *
+ * @param {HTMLElement|null} el
+ * @param {boolean} vis
+ * @param {string} [tilbakeTil] CSS-veljar for elementet fokus skal tilbake til
+ */
+export function settOverlegg(el, vis, tilbakeTil) {
+    if (!el) return;
+    if (!vis && el.contains(document.activeElement)) {
+        const maal = tilbakeTil ? document.querySelector(tilbakeTil) : null;
+        if (maal && !maal.disabled) maal.focus();
+        else document.activeElement.blur();
+    }
+    el.classList.toggle('open', vis);
+    el.inert = !vis;
+    el.setAttribute('aria-hidden', String(!vis));
+}
+
+/**
  * Formater avstand med fornuftig presisjon: meter under 1 km, elles km.
  */
 export function fmtAvstand(meter) {

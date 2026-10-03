@@ -883,7 +883,28 @@ class VindApp {
             // aldri koordinatane; dei står berre i URL-en til kallet.
             console.error('[settPunkt] feila:', e);
             meldFeil('terrenghogd', e);
-            Toast.error(`Fekk ikkje henta terrenghøgd: ${e.message}`);
+
+            /**
+             * KARTET TILBAKE TIL DET SOM GJELD — OG STADEN VERT KANDIDAT IGJEN.
+             *
+             * Markøren vart flytta FØR oppslaget. Feila det, viste kartet det
+             * nye punktet medan panelet framleis viste resultata for det førre
+             * — nøyaktig den tvilen §13 skal hindre. Og for å prøve igjen måtte
+             * brukaren klikke same stad på nytt.
+             *
+             * No går markøren tilbake til punktet resultata faktisk gjeld (eller
+             * vekk, om det ikkje finst noko), og den valde staden står att som
+             * kandidat med «Analyser her». Feilen er nesten alltid forbigåande
+             * — Kartverket har periodar med 10–20 s per oppslag — så eitt trykk
+             * (eller Enter) er nok.
+             */
+            const gjeld = state.punkt;
+            if (gjeld) this.kart.settPunkt(gjeld.lat, gjeld.lon, state.radiusM);
+            else this.kart.fjernPunkt();
+            this.sisteAdresse = null;
+            this.settKandidat(lat, lon);
+
+            Toast.error(`Fekk ikkje henta terrenghøgd: ${e.message} Trykk «Analyser her» for å prøve igjen.`);
             return;
         } finally {
             // MÅ rydde her, ikkje berre i try/catch-greinene: elles tikkar

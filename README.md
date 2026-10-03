@@ -91,7 +91,8 @@ og `php -S` er elles einstråds og deadlockar).
   Awesome, Three.js) frå offentlege CDN-ar (`unpkg.com`, `cdnjs.cloudflare.com`),
   og kartbakgrunn/flyfoto frå Kartverket og Esri. Dette krev internett, men går
   direkte frå nettlesaren din. `Content-Security-Policy` låser `connect-src`
-  til `'self'`, så ingen andre nettverkskall er moglege frå sjølve sida.
+  til `'self'` og dei to CDN-ane (som berre trengst for kjeldekart i
+  utviklarverktøya), så ingen andre nettverkskall er moglege frå sjølve sida.
 - Éin bevisst utgåande sjekk i den nedlastbare utgåva: backenden spør
   `api.github.com` om siste release-tag (maks éin gong per døgn, cacha lokalt,
   feilar stille). Det einaste som går ut er ein vanleg HTTPS-førespurnad — inga

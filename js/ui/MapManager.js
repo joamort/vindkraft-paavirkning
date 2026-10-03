@@ -695,6 +695,14 @@ export class MapManager {
         }).addTo(this.kart);
     }
 
+    /** Fjern det analyserte punktet og radiusen hans frå kartet. */
+    fjernPunkt() {
+        if (this.punktMarkor) this.kart.removeLayer(this.punktMarkor);
+        if (this.radiusSirkel) this.kart.removeLayer(this.radiusSirkel);
+        this.punktMarkor = null;
+        this.radiusSirkel = null;
+    }
+
     oppdaterRadius(radiusM) {
         this.radiusSirkel?.setRadius(radiusM);
     }

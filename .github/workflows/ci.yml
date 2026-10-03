@@ -73,8 +73,9 @@ jobs:
           curl -si http://localhost:8011/ > /tmp/root.txt
           head -1 /tmp/root.txt | grep -q '200' || { echo "::error::/ ikkje 200"; fail=1; }
           grep -qi 'content-security-policy' /tmp/root.txt || { echo "::error::manglar CSP"; fail=1; }
-          # connect-src skal vere 'self' ÅLEINE — semikolonet rett etter er poenget.
-          grep -qi "connect-src 'self';" /tmp/root.txt || { echo "::error::CSP connect-src feil"; fail=1; }
+          # connect-src: eige opphav + CDN-ane (source maps), ingen andre vertar.
+          grep -qi "connect-src 'self' https://unpkg.com https://cdnjs.cloudflare.com;" /tmp/root.txt \
+            || { echo "::error::CSP connect-src feil"; fail=1; }
 
           # HTML, CSS og JS skal alltid revaliderast (filnamna ber ingen versjon).
           for f in / /css/styles.css /js/app.js; do

@@ -54,7 +54,7 @@
  */
 
 import { CONFIG } from '../config.js';
-import { escHtml, $, fmtAvstand, fmtTal, settBrytar } from '../utils/dom.js';
+import { escHtml, $, fmtAvstand, fmtTal, settBrytar, settOverlegg } from '../utils/dom.js';
 import { horisontfall } from '../utils/geo.js';
 import { solposisjon, norskUtcOffsetTimar } from '../utils/ShadowFlicker.js';
 import { uvIRing } from '../utils/SatelliteTexture.js';
@@ -369,8 +369,7 @@ export class PanoramaView {
 
         await this._lastThree();
 
-        vert.classList.add('open');
-        vert.setAttribute('aria-hidden', 'false');
+        settOverlegg(vert, true);
         this.open = true;
         this._oktId++;
 
@@ -548,9 +547,7 @@ export class PanoramaView {
         window.removeEventListener('resize', this._paaResize);
         document.removeEventListener('keydown', this._paaTast);
 
-        const vert = $('panorama');
-        vert?.classList.remove('open');
-        vert?.setAttribute('aria-hidden', 'true');
+        settOverlegg($('panorama'), false, '[data-action="vis-panorama"]');
 
         this._riv();
         this.handlingar.paaLukk?.();

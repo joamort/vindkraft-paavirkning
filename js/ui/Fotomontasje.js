@@ -21,7 +21,7 @@
 
 import { CONFIG } from '../config.js';
 import { horisontfall } from '../utils/geo.js';
-import { escHtml, fmtAvstand, $ } from '../utils/dom.js';
+import { escHtml, fmtAvstand, $, settOverlegg } from '../utils/dom.js';
 import { Toast } from './Toast.js';
 
 const DEG = Math.PI / 180;
@@ -152,14 +152,12 @@ export class Fotomontasje {
         this._avbrytKalibrering();
         this._fyllKalibreringsval();
 
-        this.rot.classList.add('open');
-        this.rot.setAttribute('aria-hidden', 'false');
+        settOverlegg(this.rot, true);
         this._teikn();
     }
 
     lukk() {
-        this.rot?.classList.remove('open');
-        this.rot?.setAttribute('aria-hidden', 'true');
+        settOverlegg(this.rot, false, '[data-action="fotomontasje"]');
     }
 
     _lastFoto(fil) {
