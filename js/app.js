@@ -30,9 +30,9 @@ import {
     sjekkOverflate, overflateSamandrag, kanEndrastAvOverflate,
 } from './utils/SurfaceCheck.js';
 import {
-    escHtml, fmtDato, fmtAvstand, fmtDb, fmtMoh, fmtTimar, $, debounce, settBrytar,
+    escHtml, fmtDato, fmtAvstand, fmtDb, fmtMoh, fmtTal, fmtTimar, $, debounce, settBrytar,
 } from './utils/dom.js';
-import { initErrorReporter } from './utils/ErrorReporter.js';
+import { initErrorReporter, meldFeil } from './utils/ErrorReporter.js';
 import { PanoramaView } from './ui/PanoramaView.js';
 import { hentHorisont, harHorisont } from './utils/Horizon.js';
 import { hentNaerTerreng, harNaerTerreng } from './utils/NaerTerreng.js';
@@ -139,6 +139,18 @@ class VindApp {
         this._bindKontrollar();
         this._byggStatusFilter();
 
+        /**
+         * OMRÅDA VENTAR IKKJE PÅ TURBINANE, og ingenting ventar på områda.
+         *
+         * Dei tre oppstartskalla gjekk før etter kvarandre — turbinar, så
+         * område, så versjonssjekk — og ei delt lenke starta ikkje analysen
+         * før `areas.json` var nede. Ingen av dei treng svaret frå dei andre:
+         * områdepolygona er eit tilleggslag, og analysen les berre turbinane.
+         * `hentOmrader()` kastar aldri (null ved feil), så promiset kan trygt
+         * stå og vente medan resten går.
+         */
+        const omradeLovnad = hentOmrader();
+
         try {
             const data = await hentTurbinar();
             state.settDatagrunnlag({
@@ -154,17 +166,15 @@ class VindApp {
             this.kart.tegnTurbinar(state.turbinar, state.statusFilter);
             this._oppdaterDatakjelde(data.generert, data.turbiner.length);
 
-            // Områdepolygon er eit tilleggslag — appen fungerer utan.
-            this.omrader = await hentOmrader();
-            if (this.omrader?.omrader) {
-                this.kart.tegnOmrader(this.omrader.omrader, state.statusFilter, this.anleggStatus);
-            }
-
             this._lesUrlPunkt();
 
             // Sjølvhosta-varsel (gamle data / ny utgåve) — heilt uavhengig av
             // resten, og fullstendig stille i web-versjonen.
             this._sjekkSjolvhostVarsel(data.generert);
+
+            // Områdepolygon er eit tilleggslag — appen fungerer utan.
+            this.omrader = await omradeLovnad;
+            this._tegnOmrader();
         } catch (e) {
             // Utan dette står spinneren i #datakjelde og går for alltid —
             // ei stille evig-lasting er verre enn ei tydeleg feilmelding.
@@ -172,6 +182,7 @@ class VindApp {
             if (el) el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> fekk ikkje lasta turbindata';
             Toast.error(e.message);
             console.error(e);
+            meldFeil('oppstart', e);
         }
     }
 
@@ -184,16 +195,6 @@ class VindApp {
     async _sjekkSjolvhostVarsel(generert) {
         const rader = [];
 
-        const alderDagar = (Date.now() - new Date(generert).getTime()) / 86_400_000;
-        if (Number.isFinite(alderDagar) && alderDagar > CONFIG.sjolvhost.turbindataGamleDagar) {
-            rader.push(
-                `<span><i class="fa-solid fa-database"></i> Turbindata er `
-                + `${Math.round(alderDagar)} dagar gamle.</span>`
-                + `<button type="button" class="varsel-knapp" data-action="oppdater-turbindata">`
-                + `Oppdater no</button>`,
-            );
-        }
-
         try {
             const v = await sjekkVersjon();
 
@@ -202,6 +203,28 @@ class VindApp {
             // vising.
             const vEl = $('app-versjon');
             if (vEl) vEl.textContent = v?.naavaerande ?? '';
+
+            /**
+             * «GAMLE DATA» VISAST BERRE DER KNAPPEN HAR NOKO Å GÅ TIL.
+             *
+             * Rada stod før uavhengig av svaret frå backenden. På ein open
+             * web-host ville ho dermed dukka opp for kvar einaste besøkjande
+             * så snart cron-jobben hadde stått i 45 dagar — med ein knapp som
+             * anten svarar 403, eller (slik det faktisk var på littavalt.no)
+             * lèt kven som helst setje i gang ei NVE-henting. Backenden seier
+             * no sjølv om oppdatering over web er lov her (`kan_oppdatere`,
+             * same regel som refresh_turbines.php handhevar).
+             */
+            const alderDagar = (Date.now() - new Date(generert).getTime()) / 86_400_000;
+            if (v?.kan_oppdatere && Number.isFinite(alderDagar)
+                && alderDagar > CONFIG.sjolvhost.turbindataGamleDagar) {
+                rader.push(
+                    `<span><i class="fa-solid fa-database"></i> Turbindata er `
+                    + `${Math.round(alderDagar)} dagar gamle.</span>`
+                    + `<button type="button" class="varsel-knapp" data-action="oppdater-turbindata">`
+                    + `Oppdater no</button>`,
+                );
+            }
 
             if (v?.nyare && v.siste) {
                 const url = escHtml(v.url || 'https://github.com/joamort/vindkraft-paavirkning/releases/latest');
@@ -235,6 +258,7 @@ class VindApp {
             setTimeout(() => location.reload(), 1200);
         } catch (e) {
             Toast.error(e.message);
+            meldFeil('oppdater-turbindata', e);
             knapp.disabled = false;
             knapp.textContent = opphavleg;
         }
@@ -325,6 +349,7 @@ class VindApp {
                 );
             } catch (e) {
                 Toast.error(`Klarte ikkje byggje synlegheitskartet: ${e.message}`);
+                meldFeil('synlegheitskart', e);
                 this._zviKoyrer = false;
                 this._zviKnappStandard(knapp);
                 return false;
@@ -501,9 +526,29 @@ class VindApp {
             if (!state.kandidat) return;
             // Er info-modalen open, eig Escape lukkinga hennar (handtert under).
             if ($('info-modal')?.classList.contains('open')) return;
+            // Panoramaet og fotomontasjen ligg over heile sida og har sine
+            // eigne tastar — eit kandidatpunkt bak dei skal ikkje reagere.
+            if ($('panorama')?.classList.contains('open')
+                || $('fotomontasje')?.classList.contains('open')) return;
             const iSkjema = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName);
             if (iSkjema) return;
             if (e.key === 'Enter') {
+                /**
+                 * ENTER PÅ EIN FOKUSERT KNAPP ER EIT TRYKK PÅ DEN KNAPPEN.
+                 *
+                 * Utan denne sjekken kapra snarvegen kvar einaste knapp på
+                 * sida så lenge eit kandidatpunkt venta. Verifisert i
+                 * nettlesar: Enter med fokus på «Forkast punktet» STARTA
+                 * analysen, og Enter på «Gråtone» bytte ikkje bakgrunn — for
+                 * den som navigerer med tastatur gjorde altså X-knappen det
+                 * motsette av det han seier.
+                 *
+                 * Kartet og kandidatmarkøren er ikkje knappar i denne
+                 * tydinga (ein Leaflet-markør er ein <div role="button">), så
+                 * Enter rett etter eit klikk eller ei draging stadfestar som
+                 * før.
+                 */
+                if (e.target?.closest?.('button, a[href], summary')) return;
                 e.preventDefault();
                 this.stadfestPunkt();
             } else if (e.key === 'Escape') {
@@ -625,6 +670,17 @@ class VindApp {
             val.forEach((li, i) => li.classList.toggle('aktiv', i === aktivIndeks));
             if (val[aktivIndeks]) felt.setAttribute('aria-activedescendant', val[aktivIndeks].id);
         });
+
+        /**
+         * FELTET MÅ HALDE PÅ FOKUSET MEDAN EIT TREFF VERT TRYKT.
+         *
+         * På telefon er søket falda saman til eit ikon og breier seg ut over
+         * topplinja medan det har fokus (styles.css, `.adressesok:focus-within`).
+         * Eit trykk på lista flyttar elles fokus bort ved `mousedown` — feltet
+         * klappar saman, lista med det, og `click` treffer ikkje lenger rada
+         * fingeren stod på. `velg()` slepp fokuset sjølv når valet er gjort.
+         */
+        liste.addEventListener('mousedown', (e) => e.preventDefault());
 
         liste.addEventListener('click', (e) => {
             const li = e.target.closest('[data-action="velg-adresse"]');
@@ -798,18 +854,17 @@ class VindApp {
         // såg ut som det ikkje gjorde noko. Same framdrift-boks, berre eit
         // steg tidlegare og med sin eigen tekst.
         this.panel.visFramdrift(0, 1, 'Hentar terrenghøgd');
-        console.log(`[settPunkt] startar hentHoyde(${lat}, ${lon})`);
 
         /**
          * TIKKANDE SEKUNDTAL, IKKJE BERRE STATISK TEKST.
          *
-         * Verifisert i praksis (§ denne samtalen): eit kaldt Kartverket-oppslag
-         * kan ta fleire sekund uansett — det er ikkje eit hòl i appen, det er
-         * verkeleg nettverkstid. Men «Hentar terrenghøgd» som står HEILT stille
-         * ser identisk ut anten kallet er sekund 2 eller heilt daudt, og fekk
-         * nettopp deg til å tru det hadde stoppa opp. Eit tal som beveger seg
-         * er den billegaste måten å skilje «trege» frå «daud» på — ingen ny
-         * infrastruktur, berre eit `setInterval` som skriv over same teksten.
+         * Eit kaldt Kartverket-oppslag kan ta fleire sekund uansett — det er
+         * ikkje eit hòl i appen, det er verkeleg nettverkstid. Men «Hentar
+         * terrenghøgd» som står HEILT stille ser identisk ut anten kallet er
+         * i sekund 2 eller heilt daudt, og las i praksis som at appen hadde
+         * stoppa opp. Eit tal som beveger seg er den billegaste måten å
+         * skilje «treg» frå «daud» på — ingen ny infrastruktur, berre eit
+         * `setInterval` som skriv over same teksten.
          */
         const framdriftStart = performance.now();
         const framdriftTikk = setInterval(() => {
@@ -821,14 +876,13 @@ class VindApp {
         let hoyde = null;
         try {
             hoyde = await hentHoyde(lat, lon);
-            console.log('[settPunkt] hentHoyde ferdig, går vidare til analyser()', hoyde);
         } catch (e) {
             this.panel.skjulFramdrift();
-            // Manglde her før — feilen synte seg berre som ein Toast, aldri i
-            // konsollen. `hentHoyde()` i api.js loggar òg (med tidsbruk), men
-            // denne fanger tilfelle der noko ANNA (t.d. state.settPunkt under)
-            // kastar før analyser() i det heile vert kalla.
+            // Til konsollen OG til den sentrale loggen (§15) — ein Toast
+            // åleine er borte i det brukaren lukkar han. Meldinga inneheld
+            // aldri koordinatane; dei står berre i URL-en til kallet.
             console.error('[settPunkt] feila:', e);
+            meldFeil('terrenghogd', e);
             Toast.error(`Fekk ikkje henta terrenghøgd: ${e.message}`);
             return;
         } finally {
@@ -994,6 +1048,7 @@ class VindApp {
             this.panel.skjulFramdrift();
             Toast.error(`Analysen feila: ${e.message}`);
             console.error(e);
+            meldFeil('analyse', e);
         }
     }
 
@@ -1060,6 +1115,7 @@ class VindApp {
             if (e.name !== 'AbortError') {
                 this.panel.skjulFramdrift();
                 Toast.error(`Kunne ikkje hente overflatedata: ${e.message}`);
+                meldFeil('overflatesjekk', e);
             }
         } finally {
             this.overflateKoyrer = false;
@@ -1231,6 +1287,7 @@ class VindApp {
             profil = svar.profiles?.[turbin.id] ?? null;
         } catch (e) {
             Toast.error(`Fekk ikkje terrengdata for den nye plasseringa: ${e.message}`);
+            meldFeil('turbinflytt', e);
         }
         this.panel.skjulFramdrift();
 
@@ -1270,7 +1327,7 @@ class VindApp {
         if (endra.length === 0) return;
         this._reanalyserAnlegg(anleggsnr, endra);
         Toast.success(`Kva om-scenario brukt på ${endra.length} turbin${endra.length === 1 ? '' : 'ar'}: `
-            + `${scenario.mw} MW, ${Math.round(scenario.nav)}/${Math.round(scenario.rotor)} m.`);
+            + `${fmtTal(scenario.mw)} MW, ${Math.round(scenario.nav)}/${Math.round(scenario.rotor)} m.`);
     }
 
     /** Set turbinstorleiken for heile anlegget tilbake til appens eige estimat. */
@@ -1372,6 +1429,17 @@ class VindApp {
             .map((o) => o.ringer);
     }
 
+    // ---------------------------------------------------------- fotomontasje
+
+    /** Opne fotomontasjen: turbin-omriss oppå brukarens eige foto (§30). */
+    visFotomontasje() {
+        if (!state.punkt || state.resultat.length === 0) {
+            Toast.info('Analyser eit punkt først.');
+            return;
+        }
+        this.fotomontasje.opne({ punkt: state.punkt, resultat: state.resultat });
+    }
+
     // -------------------------------------------------------------- panorama
 
     /**
@@ -1410,14 +1478,6 @@ class VindApp {
      * fyller klientcachen, så neste opning er gratis. Det er BRUKEN av dei
      * som er vakta, med økt-id-en frå `opne()`.
      */
-    visFotomontasje() {
-        if (!state.punkt || state.resultat.length === 0) {
-            Toast.info('Analyser eit punkt først.');
-            return;
-        }
-        this.fotomontasje.opne({ punkt: state.punkt, resultat: state.resultat });
-    }
-
     async visPanorama() {
         const punkt = state.punkt;
         if (!punkt || this.panoramaKoyrer) return;
@@ -1621,6 +1681,7 @@ class VindApp {
             );
         } catch (e) {
             Toast.error('Klarte ikkje hente horisont: ' + e.message);
+            meldFeil('panorama', e);
         } finally {
             this.panoramaKoyrer = false;
             this._tegnPanelPaaNytt();
@@ -1839,6 +1900,9 @@ class VindApp {
             this._html2canvasPromise = new Promise((resolve, reject) => {
                 const s = document.createElement('script');
                 s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                // SRI som for resten av CDN-innhaldet — sjå index.html.
+                s.integrity = 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H';
+                s.crossOrigin = 'anonymous';
                 s.onload = () => resolve(window.html2canvas);
                 s.onerror = () => reject(new Error('biblioteket lét seg ikkje laste — er du på nett?'));
                 document.head.appendChild(s);
@@ -1881,6 +1945,7 @@ class VindApp {
             Toast.success('Skjermbilete lasta ned.');
         } catch (e) {
             Toast.error(`Klarte ikkje lage skjermbilete: ${e.message}`);
+            meldFeil('skjermbilete', e);
         } finally {
             this._skjermbileteKoyrer = false;
             if (knapp) knapp.disabled = false;
@@ -1960,7 +2025,7 @@ class VindApp {
             ${rad('Næraste turbin', s.naermaste ? `${fmtAvstand(s.naermaste.avstandM)} mot ${escHtml(s.naermaste.retning)}` : '–')}
             ${rad('Næraste synlege', s.naermasteSynlege ? `${escHtml(s.naermasteSynlege.navn)}, ${fmtAvstand(s.naermasteSynlege.avstandM)}` : 'Ingen synlege')}
             ${rad('Mest dominerande', s.mestDominerande
-                ? `${escHtml(s.mestDominerande.navn)} — ${escHtml(s.mestDominerande.dominans.tekst.toLowerCase())} (${s.mestDominerande.dominans.synsvinkelGrader.toFixed(1)}° synsvinkel)`
+                ? `${escHtml(s.mestDominerande.navn)} — ${escHtml(s.mestDominerande.dominans.tekst.toLowerCase())} (${fmtTal(s.mestDominerande.dominans.synsvinkelGrader, 1)}° synsvinkel)`
                 : 'Ingen synlege turbinar')}
             ${kh && kh.gradar > 0 ? rad('Horisontbelastning', `Turbinane fyller <strong>${kh.gradar}°</strong> av synsranda${kh.anlegg > 1 ? ` · ${kh.anlegg} anlegg` : ''}`) : ''}
             ${rad('Samla støyestimat', stoy

@@ -13,7 +13,11 @@ services:
     image: vindkraft-paavirkning
     container_name: vindkraft
     ports:
-      - "8011:8011"
+      # Berre denne maskina (loopback) — same standard som dei nedlastbare
+      # pakkane. Vil du nå appen frå andre einingar på nettet, byt til
+      # "8011:8011" — og set då CRON_SECRET i .env, elles kan alle på
+      # nettet trykkje «Oppdater no».
+      - "127.0.0.1:8011:8011"
     volumes:
       # Permanent cache og logg på verten, så data ikkje går tapt ved
       # ombygging av containeren. Terreng endrar seg aldri — cachen er

@@ -36,18 +36,40 @@ export function settBrytar(el, paa) {
 }
 
 /**
+ * Eit tal slik det skal STÅ I TEKST: desimalkomma og ekte minusteikn.
+ *
+ * `toFixed()` skriv alltid punktum, og heile grensesnittet er på norsk —
+ * «53.4 dB» og «1.75 km» les som engelsk i ei setning som elles ikkje er det.
+ * Alt som vert VIST går difor gjennom her. Koordinatar gjer det med vilje
+ * ikkje: «63,87000, 10,10000» er to tal som ser ut som fire, og dei skal
+ * dessutan kunne limast rett inn i eit kart.
+ *
+ * `Intl.NumberFormat('nn-NO')` ville gitt det same, men òg tusenskilje og eit
+ * resultat som avheng av kva ICU-data nettlesaren har. To `replace` gjer
+ * nøyaktig det som trengst, likt overalt.
+ *
+ * @param {number} verdi
+ * @param {number} [desimalar] Fast tal desimalar. Utelate → talet slik det er.
+ */
+export function fmtTal(verdi, desimalar) {
+    if (!Number.isFinite(verdi)) return '–';
+    const tekst = desimalar === undefined ? String(verdi) : verdi.toFixed(desimalar);
+    return tekst.replace('.', ',').replace('-', '−');
+}
+
+/**
  * Formater avstand med fornuftig presisjon: meter under 1 km, elles km.
  */
 export function fmtAvstand(meter) {
     if (!Number.isFinite(meter)) return '–';
     if (meter < 1000) return `${Math.round(meter)} m`;
-    if (meter < 10000) return `${(meter / 1000).toFixed(2)} km`;
-    return `${(meter / 1000).toFixed(1)} km`;
+    if (meter < 10000) return `${fmtTal(meter / 1000, 2)} km`;
+    return `${fmtTal(meter / 1000, 1)} km`;
 }
 
 /** Formater eit desibelnivå. */
 export function fmtDb(db) {
-    return Number.isFinite(db) ? `${db.toFixed(1)} dB` : '–';
+    return Number.isFinite(db) ? `${fmtTal(db, 1)} dB` : '–';
 }
 
 /** Formater ei høgd i meter over havet. */
@@ -73,7 +95,7 @@ export function fmtTimar(timar) {
     if (!Number.isFinite(timar)) return '–';
     if (timar <= 0) return '0';
     if (timar < 1) return `${Math.round(timar * 60)} min`;
-    if (timar < 10) return `${timar.toFixed(1)} t`;
+    if (timar < 10) return `${fmtTal(timar, 1)} t`;
     return `${Math.round(timar)} t`;
 }
 

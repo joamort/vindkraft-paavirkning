@@ -33,7 +33,13 @@ require_once __DIR__ . '/Logger.php';
 
 class ElevationService
 {
-    private const WPS_URL   = 'http://wps.geonorge.no/skwms1/wps.elevation2';
+    /**
+     * HTTPS, ikkje HTTP. Kvart kall hit inneheld koordinatane til brukarens
+     * eige punkt (origo i kvar profil), og dei skal ikkje gå i klartekst —
+     * minst av alt frå ei sjølvhosta utgåve på heimenettet. Tenesta svarar
+     * byte-identisk på begge (verifisert med same Execute-kall mot begge).
+     */
+    private const WPS_URL   = 'https://wps.geonorge.no/skwms1/wps.elevation2';
     private const POINT_URL = 'https://ws.geonorge.no/hoydedata/v1/punkt';
 
     /**
@@ -430,10 +436,15 @@ class ElevationService
                 if ($row === null
                     || abs(((float) ($row['x'] ?? 1e9)) - $p['lon']) > self::SOURCE_ECHO_TOLERANCE_DEG
                     || abs(((float) ($row['y'] ?? 1e9)) - $p['lat']) > self::SOURCE_ECHO_TOLERANCE_DEG) {
+                    // Avviket, ikkje koordinatane: punktet ligg på siktlinja frå
+                    // brukaren, ofte berre titals meter unna (CLAUDE.md §15).
                     Logger::warn('elevation_source', 'Punktsvaret svarar ikkje til punktet me spurde om', [
-                        'datakilde' => $datakilde,
-                        'venta'     => $p['lat'] . ',' . $p['lon'],
-                        'fekk'      => ($row['y'] ?? '?') . ',' . ($row['x'] ?? '?'),
+                        'datakilde'    => $datakilde,
+                        'indeks'       => $k . ' av ' . count($chunk),
+                        'avvik_grader' => $row === null ? 'manglar' : round(max(
+                            abs(((float) ($row['x'] ?? 1e9)) - $p['lon']),
+                            abs(((float) ($row['y'] ?? 1e9)) - $p['lat'])
+                        ), 6),
                     ]);
                     $stats['feila']++;
                     continue;
@@ -511,6 +522,23 @@ class ElevationService
             return [];
         }
 
+        /**
+         * EITT ENKELT PUNKT ER IKKJE EI LINJE.
+         *
+         * Tenesta svarar HTTP 400 («Too few points in the gpx file») på ein
+         * track med berre eitt punkt. `points()` deler i bolkar på 380, så
+         * ein rest på nøyaktig éin — eller eitt einaste ucacha punkt i eit
+         * elles varmt rutenett — gav eit kall som aldri kunne lukkast, og
+         * som difor heller aldri vart cacha: same åtvaring i loggen ved kvar
+         * cron-køyring. To like punkt er derimot ei gyldig «linje»
+         * (verifisert), så punktet vert sendt to gonger og det eine svaret
+         * brukt.
+         */
+        if (count($points) === 1) {
+            $rows = $this->queryWps([$points[0], $points[0]]);
+            return $rows === null ? null : [$rows[0]];
+        }
+
         $trkpts = '';
         foreach ($points as $p) {
             $trkpts .= sprintf('<trkpt lat="%.6f" lon="%.6f"></trkpt>', $p[0], $p[1]);
@@ -554,11 +582,30 @@ class ElevationService
         if (!is_array($data) || $data === []) {
             Logger::warn('elevation_wps', 'WPS svarte, men ikkje med gyldig JSON-array', [
                 'tal_punkt' => $count,
-                'body_start' => substr($res['body'], 0, 300),
+                'json_feil' => json_last_error_msg(),
+                'body_start' => self::utanKoordinatar($res['body']),
             ]);
             return null;
         }
         return $data;
+    }
+
+    /**
+     * Byrjinga av eit oppstraums-svar, til loggen — UTAN koordinatar.
+     *
+     * Det fyrste punktet i kvart WPS-svar er origo i den fyrste profilen,
+     * altså brukarens eige punkt. Den rå svarteksten sette det dermed rett
+     * inn i `logs/error.log`, stikk i strid med det loggen lovar (CLAUDE.md
+     * §15). Høgder, terrengtype og strukturen i svaret er det som trengst for
+     * å feilsøkje; kvar på kartet det var, trengst ikkje.
+     */
+    private static function utanKoordinatar(string $body): string
+    {
+        return preg_replace(
+            '/("(?:lat|lon|x|y)"\s*:\s*)-?[\d.]+/',
+            '$1"…"',
+            substr($body, 0, 300)
+        ) ?? '';
     }
 
     /**

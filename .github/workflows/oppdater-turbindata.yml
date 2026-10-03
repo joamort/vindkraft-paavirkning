@@ -1,0 +1,39 @@
+name: Oppdater turbindata
+
+# Dagleg oppdatering av turbin-cachen på ein web-host UTAN eigen cron.
+#
+# Har hosten cron, bruk heller den (sjå toppen av cron/fetch_turbines.php) og
+# la denne stå urørt — utan løyndomen under gjer arbeidsflyten ingenting.
+#
+# Oppsett:
+#   1. Set CRON_SECRET i .env på serveren (sjå .env.example).
+#   2. Legg HEILE adressa, med nøkkelen, inn som repo-løyndom VIND_CRON_URL:
+#        https://DITT-DOMENE/vind/cron/fetch_turbines.php?key=NØKKELEN
+#      (Settings → Secrets and variables → Actions)
+#
+# NB: GitHub slår av planlagde arbeidsflytar i repo som har stått utan
+# aktivitet i 60 dagar. Dei kan slåast på att under «Actions».
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # 03:17 UTC, kvar natt
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  oppdater:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kall cron-inngangen
+        env:
+          VIND_CRON_URL: ${{ secrets.VIND_CRON_URL }}
+        run: |
+          if [ -z "$VIND_CRON_URL" ]; then
+            echo "VIND_CRON_URL er ikkje sett — ingenting å gjere."
+            exit 0
+          fi
+          # Svaret er loggliner og teljingar frå fetcheren, ingen løyndomar.
+          kode=$(curl -sS -m 300 -o svar.txt -w '%{http_code}' "$VIND_CRON_URL")
+          tail -n 4 svar.txt || true
+          test "$kode" = 200 || { echo "::error::cron-inngangen svara HTTP $kode"; exit 1; }

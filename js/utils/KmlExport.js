@@ -19,7 +19,7 @@
  */
 
 import { CONFIG } from '../config.js';
-import { escHtml } from './dom.js';
+import { escHtml, fmtTal } from './dom.js';
 
 /** `#rrggbb` → KML sin `aabbggrr`-fargerekkjefølgje (heil dekning). */
 function kmlFarge(hex, alfaHex = 'ff') {
@@ -153,7 +153,7 @@ export function byggKmlAnalyserteTurbinar(punkt, resultat) {
     const delar = resultat.map((r) => {
         const synleg = r.analysert && r.synlegheit?.synlegDel > 0.02;
         const ekstra = r.analysert
-            ? `${r.synlegheit?.tekst ?? ''}${r.avstandM ? ` · ${(r.avstandM / 1000).toFixed(1)} km` : ''}`
+            ? `${r.synlegheit?.tekst ?? ''}${r.avstandM ? ` · ${fmtTal(r.avstandM / 1000, 1)} km` : ''}`
             : 'Ikkje analysert (manglar terrengprofil)';
 
         const styleId = `s-${r.status ?? 'ukjent'}`;

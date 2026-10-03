@@ -17,10 +17,11 @@ stadfesting før analyse, brukarjustering av estimerte turbinposisjonar),
 **sjølvhosting på GitHub** — FrankenPHP-binærar + Docker, release-on-tag (§25),
 og **v0.2.0-funksjonane**: adressesøk (§26), kumulativ horisontbelastning (§27),
 éin-sides PDF-rapport (§28), lokalt synlegheitskart / ZVI (§29), fotomontasje (§30),
-diskré versjonssjekk + «oppdater turbindata»-knapp (§31).
+diskré versjonssjekk + «oppdater turbindata»-knapp (§31), og hosting-lærdomane
+frå littavalt.no (§32).
 
 Utgjevne versjonar: `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml`
-byggjer pakkane. Siste: **v0.2.0**. Repoet er offentleg.
+byggjer pakkane. Siste: **v0.3.0**. Repoet er offentleg.
 
 ## Teknisk stack
 
@@ -89,7 +90,10 @@ backend/
     TurbineSpec.php         – Turbinmål: kuratert først, elles estimert frå effekt
     KnownSpecRegistry.php   – Oppslag i den kuraterte JSON-fila (nøkla på anleggsnr)
     TurbineLayout.php       – Estimert turbinutplassering i NVE sitt planområde
-    RateLimiter.php         – Filbasert rate limiting per IP
+    RateLimiter.php         – Filbasert rate limiting per klient (X-Forwarded-For
+                              berre frå klarerte proxyar, §32)
+    Env.php                 – `.env` + «er dette sjølvhosta?» — éin regel for
+                              «Oppdater no» (§32)
     Http.php                – cURL med stream-fallback
     Logger.php              – Filbasert delt feillogg (server + klient, §15)
 cron/fetch_turbines.php – Cron-inngang (dagleg)
@@ -102,7 +106,9 @@ Dockerfile, docker-compose.yml – «docker compose up» → localhost:8011 (§2
 scripts/dev.sh          – php -S-utviklingsserver (§25)
 scripts/dist/           – php.ini, start.sh/start.bat, LES-MEG — går inn i release-pakkane
 .github/workflows/      – ci.yml (php -l + node --check + docker-røyktest),
-                          release.yml (FrankenPHP-binærar + app, på tag v*) (§25)
+                          release.yml (FrankenPHP-binærar + app, på tag v*) (§25),
+                          oppdater-turbindata.yml (valfri nattleg cron via
+                          ?key=, inert utan repo-løyndomen VIND_CRON_URL) (§32)
 version.json            – utgåvestempel; finst BERRE i nedlastbare utgåver (§31)
 ```
 
@@ -493,8 +499,9 @@ feil i sjølve loggskrivinga skal aldri kunne velte kallaren.
 
 **Personvern (PLAN.md §8) er uendra av dette:** loggen inneheld ALDRI
 koordinatane til brukarens eige punkt — berre feilmeldingar, HTTP-status og
-tekniske kontekstfelt. `RateLimiter::clientIp()` sin rå IP hamnar heller ikkje
-i loggen.
+tekniske kontekstfelt. Klient-IP-en frå `RateLimiter::client()` hamnar heller ikkje
+i loggen. (To stader lak likevel koordinatar inn fram til §32: rå WPS-svar og
+ekko-kontrollen i DOM-oppslaget. Dei vert no maskerte.)
 
 `logs/` er gitignored (som `cache/`), men må finnast og vere skrivbar av
 webserveren i produksjon — same krav som `cache/`, sjå Hosting-spesifikke
@@ -595,7 +602,7 @@ motsette og verre: skog og bygningar SYNEST i biletet, men dei ligg flatt på
 bakken og skjermar difor ingenting. Eit foto ser meir autoritativt ut enn ei
 fargeflate, så atterhaldet må vera skarpare, ikkje svakare.
 
-### 18. Brukaren kan dra turbinane appen sjølv har plassert — og berre dei
+### 17b. Brukaren kan dra turbinane appen sjølv har plassert — og berre dei
 
 1 062 av turbinpunkta er sette av VÅR EIGEN heuristikk (§12), og 212 til er berre
 eit senterpunkt for heile anlegget (§5). Heuristikken bommar typisk ~1,3
@@ -1346,16 +1353,99 @@ release-pakkane (`release.yml` stemplar `github.ref_name`). Web/kjeldekode gjer
 aldri GitHub-kallet. Kill-switch: slett `version.json`.
 
 `backend/api/refresh_turbines.php` byggjer turbin-cachen på nytt frå NVE (POST,
-`flock` mot samtidige kall). **403 når `CRON_SECRET` er sett** (delt/offentleg
-host) — der går manuell oppdatering framleis via `cron/fetch_turbines.php?key=`.
-Frontend viser «Oppdater no»-knapp når snapshotet er eldre enn
-`CONFIG.sjolvhost.turbindataGamleDagar` (45), og utgåve-id ved overskrifta.
+`flock` mot samtidige kall). **Ope berre når appen køyrer sjølvhosta** (SAPI
+`frankenphp` eller `cli-server`, eller `VIND_SELVHOST=1`) **og `CRON_SECRET` er
+tom** — `Env::canRefreshOverWeb()`. Før §32 var regelen berre «tom
+`CRON_SECRET`», og då stod endepunktet ope på littavalt.no. `version_check.php`
+svarar `kan_oppdatere` etter same regel, og frontend viser «gamle data»-rada
+med «Oppdater no» BERRE når det er sant og snapshotet er eldre enn
+`CONFIG.sjolvhost.turbindataGamleDagar` (45). Utgåve-id står ved overskrifta.
 
 **Asynkrone knappar sperrar seg sjølv medan dei køyrer** — eit flagg, `disabled`
 + spinnar på utløysaren, valfri statustekst. Etablert på `visPanorama()`
 (`panoramaKoyrer`), `kjoerOverflatesjekk()` (`overflateKoyrer`),
 `vekslSynlegheitskart()` (`_zviKoyrer`), `brukMinPosisjon()` (`posisjonHentar`)
 og oppdater-knappen. `.knapp:disabled` og `:focus-visible` har eigne stilar.
+
+### 32. Det den live hosten lærte oss — målt mot littavalt.no, ikkje lokalt
+
+Ein gjennomgang etter «easy wins» (2026-10-02) målte appen slik ho faktisk vert
+servert på littavalt.no (one.com: Apache bak Varnish), ikkje berre lokalt. Det
+meste av funna kunne aldri ha synt seg under `php -S` eller FrankenPHP.
+
+**`refresh_turbines.php` stod ope for heile internett.** Regelen var «ope når
+`CRON_SECRET` er tom» — og tom er han òg når `.env` aldri er oppretta, som var
+tilstanden på littavalt.no. Ein POST som var meint som ein test av om
+endepunktet var stengt, bygde turbin-cachen på nytt frå NVE i produksjon
+(19:54 UTC). Det synte òg at det ikkje køyrer nokon cron der: dataa var 39
+dagar gamle. Regelen bur no i `Env::canRefreshOverWeb()`: ope BERRE når appen
+køyrer sjølvhosta (SAPI `frankenphp` eller `cli-server`, eller
+`VIND_SELVHOST=1`) OG `CRON_SECRET` er tom. Eit vanleg webhotell er stengt
+same kva som står i `.env`, og alle som lastar ned eller klonar frå GitHub
+får knappen utan oppsett. **Test aldri eit skrivande endepunkt mot produksjon
+— les koden og test lokalt.**
+
+**PHP på hosten skriv flyttal med ~50 siffer.** `"hoyde_m":365.329999999999984…`
+— ein høg `serialize_precision`. Verdiane er rette, men 3,3× så store: ein
+batch på 20 profilar gjekk frå 54 til 176 KB gzipa, og `turbines.json` +
+`areas.json` skrivne via web vart 540 KB gzipa i staden for 160.
+`ini_set('serialize_precision', '-1')` står øvst i `Http.php`, som kvart
+endepunkt som skriv flyttal lastar. CI testar det med `-d serialize_precision=100`.
+
+**Apache serverer `.js` som `text/javascript`.** Både gzip- og cache-regelen i
+`.htaccess` nemnde berre `application/javascript`, så alle 26 modulane gjekk
+ut ukomprimerte og utan cache-header: 566 KB i staden for 188 KB, 76 % av det
+sida sende ved ein kald last. Begge MIME-typane står no i regelen.
+
+**CSS hadde «1 veke» utan versjon i URL-en**, så den som hadde vore innom fekk
+ny HTML med gammalt stilark i opptil sju dagar etter ein deploy. HTML, CSS og
+JS har no `Cache-Control: no-cache, must-revalidate` i både `.htaccess` og
+`Caddyfile`. Verifisert live at Apache svarar 304 på både `-gzip`-ETag og
+`If-Modified-Since`, og under FrankenPHP på begge ETag-variantane — revalidering
+kostar eitt tomt svar per fil.
+
+**`connect-src` lista unpkg og cdnjs utan at noko trong det.** Biblioteka kjem
+inn som `<script>`/`<link>`/`import()`. Testa i nettlesar med berre `'self'`:
+analyse, adressesøk, skjermbilete og 3D-panorama, null CSP-brot.
+
+**Rate-limiten trudde på det fyrste leddet i `X-Forwarded-For`.** Fem kall med
+fem ulike headerverdiar gav fem ferske teljarar. `RateLimiter::client()` les no
+headeren berre frå klarerte proxyar (loopback, private nett, `TRUSTED_PROXIES`
+i `.env`), og då det HØGRE-mest ikkje-klarerte leddet. Kva `REMOTE_ADDR` er bak
+one.com sin Varnish, er ikkje målt — difor er det tvitydige tilfellet (offentleg
+`REMOTE_ADDR` + header) gjort trygt begge vegar: identiteten vert paret
+`tilkopling>påstått klient`, og tilkoplinga åleine får eit tak på 20× grensa.
+Ein klient som lyg vert avgrensa; brukarar bak ein ærleg proxy stengjer ikkje
+for kvarandre. Sjå kommentaren i `RateLimiter.php`.
+
+**WPS-kalla gjekk over `http://`** med brukarens punkt som origo. Same kall over
+HTTPS gir byte-identisk svar. Og ein track med **eitt** punkt gir HTTP 400
+(«Too few points in the gpx file») — ein rest på éin i `points()` kunne aldri
+lukkast og vart heller aldri cacha. To like punkt er ei gyldig «linje», så det
+eine punktet vert sendt to gonger.
+
+I frontend, frå same runde:
+
+- **Enter kapra alle knappar** medan eit kandidatpunkt venta: Enter på
+  «Forkast punktet» STARTA analysen. Snarvegen hoppar no over `button`,
+  `a[href]` og `summary` — men ikkje Leaflet-markørar (`div role="button"`),
+  så Enter etter eit kartklikk eller ei draging stadfestar som før.
+- **Adressesøket var ubrukeleg på telefon**: 44–67 px breitt på 360–430 px
+  skjermar, plass til 0–3 teikn. Under 560 px er det no eit ikon som breier seg
+  over topplinja med fokus (16 px skrift, så iOS ikkje zoomar). Lista har ein
+  `mousedown`-lyttar som held fokuset, elles klappar feltet saman før klikket
+  landar.
+- **Botnpanelet dekte 62vh også i tomtilstanden**, så det var ~130 px kart å
+  klikke i. `--panel-hogd` er 36vh til det fyrste resultatet er inne.
+- **Desimalkomma** (`fmtTal()` i `dom.js`) i alt som vert VIST, òg
+  Chart.js-aksane (`locale: 'nb-NO'`). Koordinatar har med vilje framleis
+  punktum: «63,87000, 10,10000» er to tal som ser ut som fire.
+- **Chart.js lastast fyrst når det finst resultat** (69 KB gzipa spart på kvar
+  sidevising), med SRI som resten av CDN-innhaldet.
+- **`og:image` peikar på GitHub** (`raw.githubusercontent.com/…/main/assets/
+  og-bilete.jpg`), ikkje på littavalt.no. Ingen installasjon skal vere avhengig
+  av ein annan sin server. Og MEDVITE ingen `og:url`: han ville sendt delte
+  `?lat=&lon=`-lenker til framsida.
 
 ## Køyre lokalt
 
@@ -1464,8 +1554,23 @@ nettlesaren, ikkje ein kopi. Node er berre eit dev-verktøy her.
   (`ws.geonorge.no`, `wps.geonorge.no`) går fint — bruk ein eksisterande
   `cache/turbines.json` og test alt som ikkje er sjølve turbin-hentinga.
 - **`.htaccess` blokkerer no HEILE `cache/` bortsett frå `turbines.json` og
-  `areas.json`** (CONFIG-VERSION 3). `Caddyfile` har same regel. Legg du ei ny
+  `areas.json`** (sidan CONFIG-VERSION 3). `Caddyfile` har same regel. Legg du ei ny
   fil i `cache/` som frontend må lese, må begge oppdaterast.
+
+- **Apache: `.js` er `text/javascript`.** Ein `AddOutputFilterByType`/
+  `ExpiresByType` som berre nemner `application/javascript` treffer ingenting.
+  Sjå §32.
+- **Hosten kan ha ein annan `serialize_precision`.** Lokalt er han -1, på
+  littavalt.no var han så høg at kvart flyttal fekk ~50 siffer. `Http.php` set
+  han; eit nytt endepunkt som skriv flyttal UTAN å laste `Http.php` må gjere
+  det same.
+- **Ikkje test skrivande endepunkt mot produksjon.** Ein «sjekk om han er
+  stengt»-POST mot `refresh_turbines.php` bygde den live cachen på nytt (§32).
+  Mot littavalt.no: berre GET.
+- **Kartverket sin WPS kan vere treg og svare HTTP 400 «Process failed»** på
+  kall som går fint ein augeblink seinare (målt 15–41 s per kall ein
+  laurdagsmorgon). Over HTTP og HTTPS likt — ikkje ein feil i appen. Det gir
+  «N turbinar mangla terrengdata»; eit nytt forsøk hjelper.
 
 ## TODO / neste fasar
 

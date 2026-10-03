@@ -54,7 +54,7 @@
  */
 
 import { CONFIG } from '../config.js';
-import { escHtml, $, fmtAvstand, settBrytar } from '../utils/dom.js';
+import { escHtml, $, fmtAvstand, fmtTal, settBrytar } from '../utils/dom.js';
 import { horisontfall } from '../utils/geo.js';
 import { solposisjon, norskUtcOffsetTimar } from '../utils/ShadowFlicker.js';
 import { uvIRing } from '../utils/SatelliteTexture.js';
@@ -1640,7 +1640,7 @@ export class PanoramaView {
          */
         const oppløysing = nt
             ? `${nt.talRetningar} skanna retningar dei fyrste
-               ${(nt.naerAvstandM / 1000).toFixed(1)} km og
+               ${fmtTal(nt.naerAvstandM / 1000, 1)} km og
                ${s.talRetningar} lenger ute`
             : `${s.delvis ? s.ekte : s.talRetningar} skanna retningar`;
 
@@ -1830,7 +1830,7 @@ export class PanoramaView {
         if (ut) {
             const h = this.sol.hoyde;
             const ord = h > 0 ? 'over' : 'under';
-            ut.innerHTML = `<i class="fa-solid fa-sun"></i> Sol ${Math.abs(h).toFixed(1)}° ${ord} horisonten`
+            ut.innerHTML = `<i class="fa-solid fa-sun"></i> Sol ${fmtTal(Math.abs(h), 1)}° ${ord} horisonten`
                 + ` · asimut ${Math.round(this.sol.asimut)}°`;
         }
 

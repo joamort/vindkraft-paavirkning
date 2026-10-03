@@ -27,8 +27,9 @@
 
 	# ---------------------------------------------------- Tryggingsheader
 	# script-src har INGEN 'unsafe-inline'. connect-src er berre 'self' —
-	# alle eksterne API-kall (NVE, Kartverket WPS) går gjennom PHP-backenden
-	# på denne maskina, nettlesaren snakkar aldri direkte med dei.
+	# bokstavleg, utan CDN-ar: alle eksterne API-kall (NVE, Kartverket WPS)
+	# går gjennom PHP-backenden på denne maskina, og biblioteka frå
+	# unpkg/cdnjs kjem inn som <script>/<link>/import(), ikkje som fetch().
 	# IKKJE fjern arcgisonline frå img-src: 3D-panoramaet hentar dei same
 	# flisane som <img crossOrigin> og teiknar dei som terrengtekstur.
 	# Sjå .htaccess og CLAUDE.md §17 for full grunngjeving.
@@ -38,12 +39,15 @@
 		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "geolocation=(self), microphone=(), camera=()"
-		Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com https://services.arcgisonline.com https://unpkg.com; connect-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com https://services.arcgisonline.com https://unpkg.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 	}
 
-	# index.html skal alltid revaliderast, slik at nye JS-versjonar lastast.
-	@index path / /index.html
-	header @index Cache-Control "no-cache, must-revalidate"
+	# HTML, CSS og JS skal alltid revaliderast (304 til fila faktisk er
+	# endra). Filnamna ber ingen versjon, så utan dette gjettar nettlesaren
+	# sjølv kor lenge dei er ferske — og ei oppgradert pakke på same
+	# localhost-port kan då køyre gammal JS mot ny HTML. Sjå .htaccess.
+	@revalider path / *.html *.css *.js
+	header @revalider Cache-Control "no-cache, must-revalidate"
 
 	# ---------------------------------------------------- Tilgangskontroll
 	# Speglar <FilesMatch> / RewriteRule i .htaccess.

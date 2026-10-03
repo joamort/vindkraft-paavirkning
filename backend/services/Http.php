@@ -13,6 +13,26 @@
  * Ingen tredjepartsavhengigheiter (jf. TECH_STACK.md — ingen Composer i runtime).
  */
 
+/**
+ * FLYTTAL I JSON: ALLTID KORTASTE FORM, UANSETT KVA php.ini SEIER.
+ *
+ * `json_encode()` følgjer `serialize_precision`. PHP sin standard er -1
+ * («kortaste tal som les tilbake til same verdi»), men ein host kan ha sett
+ * noko anna — og littavalt.no har det. Verifisert mot det live endepunktet:
+ *
+ *     "hoyde_m":365.32999999999998408384271897375583648681640625
+ *
+ * Verdien er den same, så ingenting vart FEIL — berre tre gonger så stort.
+ * Ein batch på 20 terrengprofilar gjekk frå 54 til 176 KB (gzipa), og kvar
+ * cache-fil og kvar turbines.json skriven via web vart tilsvarande oppblåst.
+ * Sjå CLAUDE.md §32.
+ *
+ * Lina står HER fordi kvart endepunkt som skriv flyttal lastar denne fila,
+ * direkte eller via ElevationService / NveVindkraftFetcher. Eit nytt endepunkt
+ * som hentar noko oppstraums får henne dermed med seg utan å måtte hugse det.
+ */
+ini_set('serialize_precision', '-1');
+
 class Http
 {
     /** Standard timeout i sekund for eit enkelt kall. */
@@ -20,9 +40,11 @@ class Http
 
     /**
      * User-Agent identifiserer appen mot offentlege norske API-ar. Kartverket og
-     * NVE ber eksplisitt om ein identifiserbar UA med kontaktinfo.
+     * NVE ber eksplisitt om ein identifiserbar UA med kontaktinfo. Peikar på
+     * repoet, ikkje på ein bestemt installasjon: kallet kan like gjerne kome
+     * frå ei pakke på nokon si eiga maskin.
      */
-    public const USER_AGENT = 'VindPaaverknad/1.0 (+https://littavalt.no/vind/)';
+    public const USER_AGENT = 'VindPaaverknad/1.0 (+https://github.com/joamort/vindkraft-paavirkning)';
 
     /**
      * Utfør ein GET og returner rå responstekst.

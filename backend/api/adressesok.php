@@ -35,7 +35,7 @@ if (strlen($q) > 150) {
 }
 
 $limiter = new RateLimiter();
-$verdict = $limiter->check('adr:ip:' . RateLimiter::clientIp(), AS_RATE_LIMIT, AS_RATE_WINDOW_SEC);
+$verdict = $limiter->checkClient('adr', AS_RATE_LIMIT, AS_RATE_WINDOW_SEC);
 if (!$verdict['tillatt']) {
     http_response_code(429);
     header('Retry-After: ' . $verdict['nullstilles_om']);

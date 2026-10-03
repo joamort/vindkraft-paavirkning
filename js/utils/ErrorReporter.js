@@ -55,13 +55,21 @@ function send(payload) {
  * feilen for brukaren via Toast, men me framleis vil ha han i loggen).
  */
 export function meldFeil(type, error, ekstra = {}) {
-    send({
-        type,
-        melding: error?.message ?? String(error),
-        stack: (error?.stack ?? '').slice(0, 4000),
-        url: location.pathname,
-        linje: ekstra.linje ?? '?',
-    });
+    // Ei avbroten henting er ikkje ein feil — brukaren flytta berre punktet.
+    if (error?.name === 'AbortError') return;
+    try {
+        send({
+            type,
+            melding: error?.message ?? String(error),
+            stack: (error?.stack ?? '').slice(0, 4000),
+            url: location.pathname,
+            linje: ekstra.linje ?? '?',
+        });
+    } catch {
+        // Kallaren står alt midt i si eiga feilhandsaming. Ein rapport som
+        // ikkje lét seg sende skal aldri bli ein ny feil oppå den fyrste —
+        // heller ikkje i Node, der testsuiten køyrer same koden utan `location`.
+    }
 }
 
 /** Registrer dei globale fangarane. Kall éin gong ved oppstart. */

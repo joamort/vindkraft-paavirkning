@@ -1,4 +1,4 @@
-# CONFIG-VERSION: 3 (2026-08-30)
+# CONFIG-VERSION: 4 (2026-10-02)
 # Bump talet over ved kvar endring, slik at filinnhaldet garantert skil seg frå
 # det som alt ligg på server (same konvensjon som PolitiKartet).
 #
@@ -22,9 +22,15 @@
     # style-src treng 'unsafe-inline' fordi Leaflet set style-attributt direkte
     # på kartelementa når det posisjonerer fliser og markørar.
     #
-    # connect-src: berre vårt eige opphav. Alle eksterne API-kall (NVE,
-    # Kartverket WPS) går gjennom PHP-backenden — nettlesaren snakkar aldri
-    # direkte med dei. img-src må derimot tillate flis-tenarane.
+    # connect-src: berre vårt eige opphav — BOKSTAVLEG, ingen CDN-ar. Alle
+    # eksterne API-kall (NVE, Kartverket WPS) går gjennom PHP-backenden —
+    # nettlesaren snakkar aldri direkte med dei. Biblioteka frå unpkg/cdnjs
+    # kjem inn som <script>, <link> og import(), som alle høyrer til
+    # script-src/style-src; ingenting i appen gjer fetch() mot dei. (Dei to
+    # CDN-vertane stod her til og med versjon 3 utan å trengast. Verifisert i
+    # nettlesar med berre 'self': analyse, adressesøk, skjermbilete og
+    # 3D-panorama gjekk med null CSP-brot.) img-src må derimot tillate
+    # flis-tenarane.
     #
     # IKKJE FJERN server.arcgisonline.com FRÅ img-src. Han ser ut som eit
     # reint Leaflet-behov (flybilete-bakgrunnslaget i 2D-kartet), men
@@ -35,7 +41,7 @@
     # under connect-src og kravt anten ei CSP-utviding eller ein PHP-proxy.
     # Blir direktivet stramma inn, feilar panoramaet STILLE — det fell tilbake
     # til prosedyrefarge i staden for å gi ein feil.
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com https://services.arcgisonline.com https://unpkg.com; connect-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://cache.kartverket.no https://server.arcgisonline.com https://services.arcgisonline.com https://unpkg.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 </IfModule>
 
 # ============================================================ Tilgangskontroll
@@ -70,23 +76,40 @@ Options -Indexes
 
 <IfModule mod_expires.c>
     ExpiresActive On
-    ExpiresByType text/css               "access plus 1 week"
-    ExpiresByType application/javascript "access plus 1 week"
     ExpiresByType image/png              "access plus 1 month"
+    ExpiresByType image/jpeg             "access plus 1 month"
     ExpiresByType image/svg+xml          "access plus 1 month"
     # Turbin-cachen vert oppdatert dagleg av cron — kort levetid.
     ExpiresByType application/json       "access plus 1 hour"
 </IfModule>
 
-# index.html skal alltid vera fersk, slik at nye JS-versjonar faktisk lastast.
-<FilesMatch "index\.html$">
+# HTML, CSS OG JS SKAL ALLTID REVALIDERAST.
+#
+# Appen har ingen build-steg, så filnamna ber ingen versjon: js/app.js heiter
+# det same før og etter ein deploy, og ES-modulane importerer kvarandre med
+# relative stiar som ingen ?v=-parameter når. «no-cache» tyder ikkje «ikkje
+# cache», men «spør fyrst»: nettlesaren held på fila og får eit tomt 304-svar
+# til ho faktisk er endra.
+#
+# Til og med versjon 3 hadde CSS «access plus 1 week» — den som hadde vore
+# innom fekk dermed ny HTML med GAMMALT stilark i opptil sju dagar etter ein
+# deploy. JS hadde same regel på papiret, men han trefte aldri (sjå MIME-
+# merknaden under), så JS gjekk ut heilt utan cache-header.
+<FilesMatch "\.(html|css|js)$">
     <IfModule mod_headers.c>
         Header set Cache-Control "no-cache, must-revalidate"
     </IfModule>
 </FilesMatch>
 
+# MIME-TYPEN FOR JS ER text/javascript, IKKJE application/javascript.
+#
+# Apache serverer .js som text/javascript (RFC 9239). Ein regel som berre
+# nemner application/javascript treffer difor ingenting — verifisert mot den
+# live sida: alle 26 modulane gjekk ut ukomprimerte, 566 KB i staden for
+# 188 KB. Begge typane står her, så regelen held uansett kva mime.types
+# serveren har.
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css
-    AddOutputFilterByType DEFLATE application/json application/javascript
+    AddOutputFilterByType DEFLATE application/json application/javascript text/javascript
     AddOutputFilterByType DEFLATE image/svg+xml
 </IfModule>

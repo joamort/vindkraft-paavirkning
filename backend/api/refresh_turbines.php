@@ -5,15 +5,19 @@
  * Byggjer turbin-cachen på nytt frå NVE, trigga av «Oppdater no»-knappen i
  * den sjølvhosta appen. Tek typisk 20–40 s (11 ArcGIS-lag).
  *
- * Tilgang: berre når CRON_SECRET er TOM (ein lokal, sjølvhosta installasjon).
- * På ein delt/offentleg host er CRON_SECRET sett, og då er dette endepunktet
- * heilt avslege — der går manuell oppdatering framleis via
- * `cron/fetch_turbines.php?key=...`. Elles kunne kven som helst tvinge fram
- * tunge NVE-kall.
+ * Tilgang: berre i ei SJØLVHOSTA utgåve (FrankenPHP-serveren i pakkane og
+ * Docker, `php -S` frå kjeldekoden, eller `VIND_SELVHOST=1`) — og berre når
+ * `CRON_SECRET` er tom. På
+ * ein vanleg web-host er endepunktet avslege uansett kva som står i `.env`;
+ * der går oppdatering via `cron/fetch_turbines.php` (CLI, eller `?key=…`).
+ * Elles kunne kven som helst tvinge fram tunge NVE-kall og overskrive
+ * datafilene. Regelen bur i Env::canRefreshOverWeb() — sjå der for kvifor
+ * «tom CRON_SECRET» åleine ikkje lenger er nok.
  *
  * POST utan innhald. Samtidige kall vert avviste med ein fillås.
  */
 
+require_once __DIR__ . '/../services/Env.php';
 require_once __DIR__ . '/../services/NveVindkraftFetcher.php';
 require_once __DIR__ . '/../services/Logger.php';
 
@@ -27,26 +31,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 }
 
 // --- Tilgang ----------------------------------------------------------------
-$envFil   = dirname(__DIR__, 2) . '/.env';
-$secret   = '';
-if (is_readable($envFil)) {
-    foreach (file($envFil, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        $line = trim($line);
-        if ($line === '' || $line[0] === '#') {
-            continue;
-        }
-        [$k, $v] = array_pad(explode('=', $line, 2), 2, '');
-        if (trim($k) === 'CRON_SECRET') {
-            $secret = trim($v, " \t\"'");
-            break;
-        }
-    }
-}
-if ($secret !== '') {
+if (!Env::canRefreshOverWeb()) {
     http_response_code(403);
     echo json_encode([
         'ok'    => false,
-        'error' => 'Avslege på denne installasjonen. Bruk cron/fetch_turbines.php?key=…',
+        'error' => 'Avslege på denne installasjonen. Bruk cron/fetch_turbines.php.',
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

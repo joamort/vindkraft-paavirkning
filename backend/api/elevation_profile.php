@@ -122,7 +122,7 @@ if ($targets === []) {
 // Prefikset gir kvart endepunkt sin eigen fil, og grensene betyr det dei seier.
 $cost    = max(1, (int) ceil($estimatedPts / 380));
 $limiter = new RateLimiter();
-$verdict = $limiter->check('profil:ip:' . RateLimiter::clientIp(), RATE_LIMIT, RATE_WINDOW_SEC, $cost);
+$verdict = $limiter->checkClient('profil', RATE_LIMIT, RATE_WINDOW_SEC, $cost);
 
 if (!$verdict['tillatt']) {
     header('Retry-After: ' . $verdict['nullstilles_om']);

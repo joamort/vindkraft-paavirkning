@@ -24,6 +24,7 @@
 
 import { CONFIG } from '../config.js';
 import { hentProfilar } from '../api.js';
+import { meldFeil } from './ErrorReporter.js';
 import { haversine } from './geo.js';
 import { beregnPaaverknad, byggSamandrag } from './ImpactCalculator.js';
 import { samletStoy } from './NoiseModel.js';
@@ -88,8 +89,10 @@ export async function koyrAnalyse({ punkt, turbinar, paaFramdrift, signal }) {
         } catch (e) {
             if (e.name === 'AbortError') throw e;
             // Ein feilande batch skal ikkje velte heile analysen — turbinane
-            // hamnar i lista som "ikkje analysert" i staden.
+            // hamnar i lista som "ikkje analysert" i staden. Brukaren får ein
+            // toast om kor mange det gjeld; kvifor, står berre i loggen.
             console.warn('Batch feila, held fram utan profil:', e.message);
+            meldFeil('analyse-batch', e);
         }
 
         const delresultat = batch.map((t) => beregnPaaverknad({

@@ -18,16 +18,68 @@
  */
 
 import { krummingsfall } from '../utils/geo.js';
+import { fmtTal } from '../utils/dom.js';
+
+/**
+ * Chart.js, pinna versjon, med SRI-hash (sjå index.html for korleis hashen
+ * vert rekna ut når versjonen skal bytast).
+ */
+const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+const CHART_SRI = 'sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD';
+
+let chartLovnad = null;
+
+/**
+ * Last Chart.js — fyrst når det finst ein graf å teikne.
+ *
+ * Biblioteket stod før som ein <script>-tagg i index.html og vart henta ved
+ * kvar einaste sidevising: 69 KB gzipa for eit diagram som berre finst i
+ * detaljvisinga for éin turbin. Same grunngjeving som Three.js (CLAUDE.md
+ * §16) og html2canvas: den som berre ser på kartet skal ikkje betale for det.
+ *
+ * Chart.js sitt UMD-bygg set den globale `Chart`, så det er ein injisert
+ * <script>-tagg og ikkje `import()`. Promiset er memoisert — panelet kallar
+ * denne når resultata er inne (førehandslasting), og `tegn()` kallar henne
+ * på nytt når brukaren opnar ein turbin.
+ *
+ * @returns {Promise<void>}
+ */
+export function lastChartJs() {
+    if (typeof Chart !== 'undefined') return Promise.resolve();
+    if (!chartLovnad) {
+        chartLovnad = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = CHART_URL;
+            s.integrity = CHART_SRI;
+            s.crossOrigin = 'anonymous';
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('Chart.js lét seg ikkje laste'));
+            document.head.appendChild(s);
+        }).catch((e) => {
+            // Nullstill, slik at neste forsøk faktisk får prøve på nytt.
+            chartLovnad = null;
+            throw e;
+        });
+    }
+    return chartLovnad;
+}
 
 export class ProfileChart {
     /** @param {string} canvasId */
     constructor(canvasId) {
         this.canvasId = canvasId;
         this.chart = null;
+        /** Resultatet grafen SKAL vise — sjå tegn() for kvifor det må hugsast. */
+        this._ynskt = null;
     }
 
     /** Fjern grafen (t.d. når ingen turbin er vald). */
     tom() {
+        this._ynskt = null;
+        this._riv();
+    }
+
+    _riv() {
         if (this.chart) {
             this.chart.destroy();
             this.chart = null;
@@ -40,10 +92,27 @@ export class ProfileChart {
      * @param {object} r Resultat frå beregnPaaverknad()
      */
     tegn(r) {
-        const canvas = document.getElementById(this.canvasId);
-        if (!canvas || !r?.profil || typeof Chart === 'undefined') return;
+        this._ynskt = r;
 
-        this.tom();
+        /**
+         * BIBLIOTEKET KAN VERE UNDERVEGS.
+         *
+         * Kjem det inn etter at brukaren har lukka detaljvisinga eller opna
+         * ein annan turbin, skal den gamle grafen ikkje dukke opp — difor
+         * samanlikninga mot `_ynskt`, som `tom()` nullstiller. Feilar
+         * nedlastinga, står grafboksen tom; tala i detaljvisinga er dei same.
+         */
+        if (typeof Chart === 'undefined') {
+            lastChartJs()
+                .then(() => { if (this._ynskt === r) this.tegn(r); })
+                .catch(() => {});
+            return;
+        }
+
+        const canvas = document.getElementById(this.canvasId);
+        if (!canvas || !r?.profil) return;
+
+        this._riv();
 
         const D = r.avstandM;
         const kmX = (m) => m / 1000;
@@ -246,6 +315,10 @@ export class ProfileChart {
                 ],
             },
             options: {
+                // Akseetikettane følgjer elles nettlesaren sitt språk — «0.5»
+                // i ein engelsk Chrome, «0,5» i ein norsk. Resten av appen
+                // skriv desimalkomma (fmtTal), så grafen skal òg gjere det.
+                locale: 'nb-NO',
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
@@ -277,7 +350,7 @@ export class ProfileChart {
                     },
                     tooltip: {
                         callbacks: {
-                            title: (items) => `${items[0].parsed.x.toFixed(2)} km frå punktet`,
+                            title: (items) => `${fmtTal(items[0].parsed.x, 2)} km frå punktet`,
                             label: (item) => {
                                 const p = r.profil[item.dataIndex];
                                 if (item.datasetIndex === 0 && p) {

@@ -34,7 +34,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 $limiter = new RateLimiter();
 // EIGEN TELJAR PER ENDEPUNKT — sjå kommentaren i elevation_profile.php.
 // Med felles teljar var denne (grense 30) daud etter det fyrste panoramaet.
-$verdict = $limiter->check('logg:ip:' . RateLimiter::clientIp(), RATE_LIMIT, RATE_WINDOW_SEC);
+$verdict = $limiter->checkClient('logg', RATE_LIMIT, RATE_WINDOW_SEC);
 if (!$verdict['tillatt']) {
     // Ikkje 429 med feilmelding — ein klient som allereie spammar feil skal
     // ikkje få enda ein grunn til å logge noko. Berre svar tomt og stopp.

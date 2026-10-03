@@ -55,6 +55,11 @@ docker compose up
 Opne så `http://localhost:8011`. `cache/` og `logs/` vert lagra på verten,
 så data overlever ombygging.
 
+Porten er berre opna mot denne maskina (`127.0.0.1:8011`). Vil du nå appen
+frå andre einingar på nettet, byt til `"8011:8011"` i `docker-compose.yml` —
+og set då `CRON_SECRET` i `.env`, elles kan alle på nettet trykkje
+«Oppdater no».
+
 ### 3. Frå kjeldekode (for utvikling)
 
 Krev **PHP 8** (Linux/macOS):
@@ -93,8 +98,9 @@ og `php -S` er elles einstråds og deadlockar).
   identifiserande informasjon. Slett `version.json` for å slå han av. Web- og
   kjeldekode-oppsett gjer aldri dette kallet.
 
-Serveren bind seg berre til `localhost` (Docker-varianten til containeren).
-Ikkje eksponer han mot internett — han har ingen autentisering.
+Serveren bind seg berre til `localhost` — òg i Docker, der porten berre vert
+publisert på `127.0.0.1`. Ikkje eksponer han mot internett — han har ingen
+autentisering.
 
 ---
 
@@ -114,8 +120,16 @@ dei mot ekte cacha data + live Kartverket-kall. Node er berre eit dev-verktøy.
 
 ## Oppdatere turbindata
 
-Slett `cache/turbines.json` og start på nytt — eller køyr
-`php cron/fetch_turbines.php` (henter 11 ArcGIS-lag frå NVE, ~7 s).
+Køyrer du appen sjølv (pakke, Docker eller `./scripts/dev.sh`), viser han ein
+«Oppdater no»-knapp når dataa er meir enn 45 dagar gamle. Elles: slett
+`cache/turbines.json` og start på nytt, eller køyr `php cron/fetch_turbines.php`
+(hentar 11 ArcGIS-lag frå NVE, ~7 s).
+
+På ein **offentleg web-host** er knappen alltid avslått — der skal ikkje kven
+som helst kunne setje i gang NVE-hentingar. Bruk cron (`cron/fetch_turbines.php`),
+eller set `CRON_SECRET` i `.env` og la `.github/workflows/oppdater-turbindata.yml`
+kalle `cron/fetch_turbines.php?key=…` kvar natt (sjå toppen av fila for
+oppsettet).
 
 ---
 

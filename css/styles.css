@@ -1577,6 +1577,25 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 /* =================================================== Mobil */
 
 @media (max-width: 900px) {
+    /*
+     * HØGDA PÅ BOTNPANELET — éin variabel, fordi fire reglar må vere samde.
+     *
+     * Panelet, kontrollstabelen, framdriftsboksen og stadfestingsboksen
+     * rekna alle med «62vh» kvar for seg. Så lenge talet var fast, gjekk det
+     * bra; no er det to tilstandar, og dei må flytte seg saman.
+     *
+     * TOMTILSTANDEN FÅR EIT LÅGT PANEL. Før brukaren har valt eit punkt,
+     * inneheld panelet berre ei kort rettleiing som seier «klikk i kartet» —
+     * medan panelet sjølv dekte 62 % av skjermen og let att ei kartstripe på
+     * ~130 px (390×844) å klikke i. Med 36vh er stripa ~350 px. Så snart
+     * eit resultat er inne, er `.tomtilstand` borte og panelet veks tilbake.
+     *
+     * `:has()` manglar i eldre nettlesarar; der fell heile regelen bort og
+     * panelet står på 62vh som før.
+     */
+    body { --panel-hogd: 62vh; }
+    body:has(#panel-innhald > .tomtilstand:not(.liten)) { --panel-hogd: 36vh; }
+
     .oppsett { grid-template-columns: 1fr; position: relative; }
 
     .berre-mobil { display: inline-flex; }
@@ -1586,14 +1605,23 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
     .sidepanel {
         position: absolute;
         inset: auto 0 0 0;
-        height: 62vh;
+        height: var(--panel-hogd);
         border-left: none;
         border-top: 1px solid var(--kant);
         border-radius: 14px 14px 0 0;
         box-shadow: 0 -8px 26px rgba(15, 23, 42, 0.18);
         z-index: 1000;
-        transition: transform 0.3s ease;
+        transition: transform 0.3s ease, height 0.3s ease;
     }
+
+    /*
+     * Rettleiinga i det låge panelet: berre det som trengst for å kome i
+     * gang. Det store ikonet er pynt, og tastaturhintet (Enter/Esc) gjeld
+     * ikkje ein skjerm utan tastatur.
+     */
+    .tomtilstand:not(.liten) { padding: 6px 14px 10px; }
+    .tomtilstand:not(.liten) > i,
+    .tomtilstand-hint { display: none; }
 
     .sidepanel.skjult { transform: translateY(calc(100% - 8px)); }
 
@@ -1632,16 +1660,25 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
         max-width: 170px;
         top: 8px;
         left: 8px;
-        max-height: calc(100% - 62vh - 16px);
+        max-height: calc(100% - var(--panel-hogd) - 16px);
         overflow-y: auto;
         overscroll-behavior: contain;
         padding-right: 4px;
     }
 
+    /*
+     * Tre bakgrunnsknappar på 170 px. Med vanleg polstring trong dei ~175 px,
+     * og «Flyfoto» stakk ut gjennom kanten av kortet. Smalare polstring og
+     * litt mindre skrift får dei inn på éi rad; `flex-wrap` er selen om ein
+     * skrifttype skulle vere breiare enn den dette er målt med.
+     */
+    .knapperad { gap: 3px; flex-wrap: wrap; }
+    .knapperad .minknapp { padding: 5px 3px; font-size: 11.5px; }
+
     /* Skyv panelet bort, og kontrollane får heile kartet. */
     .panel-skjult .kart-kontrollar { max-height: calc(100% - 16px); }
 
-    .framdrift { bottom: calc(62vh + 12px); }
+    .framdrift { bottom: calc(var(--panel-hogd) + 12px); }
 
     /*
      * Stadfestingsboksen på mobil.
@@ -1654,7 +1691,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
     .stadfest {
         left: 8px;
         right: 8px;
-        bottom: calc(62vh + 12px);
+        bottom: calc(var(--panel-hogd) + 12px);
         transform: none;
         max-width: none;
     }
@@ -1728,10 +1765,60 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 @media (max-width: 560px) {
     .disclaimer { font-size: 11.5px; padding: 8px 12px; }
     .nokkeltal { grid-template-columns: repeat(2, 1fr); }
-    .merke h1 { font-size: 14px; }
+    .merke > div { min-width: 0; }
+    .merke h1 { font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
     /* Adressesøket er viktigare enn merke-undertittelen på ein smal skjerm. */
     #datakjelde { display: none; }
-    .adressesok { flex-basis: 130px; }
+
+    /*
+     * ADRESSESØKET PÅ TELEFON: eit ikon som breier seg ut når det får fokus.
+     *
+     * Feltet stod før som eit vanleg flex-element med `flex-basis: 130px`.
+     * Men topplinja har fem verktøyknappar som ikkje krympar, så det som
+     * faktisk vart att var 44 px på ein 360 px brei skjerm og 50 px på 390 —
+     * målt i nettlesar: plass til NULL teikn, ei trefliste like smal som
+     * feltet, og ein tittel som ikkje fekk plass og vart liggjande under det.
+     * Adressesøket er den naturlege vegen inn på telefon, og det var der
+     * ubrukeleg.
+     *
+     * No er det eit ikon på line med dei andre, og tek heile topplinja medan
+     * det er i bruk: 344 px å skrive i, og ei trefliste i full breidd.
+     * `mousedown`-lyttaren i app.js (`_bindAdressesok`) held fokuset medan
+     * eit treff vert trykt — utan han klappar feltet saman før klikket landar.
+     */
+    .topplinje { position: relative; }
+
+    .adressesok { flex: 0 0 40px; margin-left: auto; }
+    .adressesok > i { left: 13px; }
+
+    #adresse-input {
+        /* Under 16 px zoomar iOS inn på feltet når det får fokus. */
+        font-size: 16px;
+        padding-right: 0;
+        cursor: pointer;
+    }
+    /* Samanfalda er det berre eit ikon — eit avkutta «St…» les som ein feil. */
+    #adresse-input:not(:focus),
+    #adresse-input:not(:focus)::placeholder { color: transparent; }
+    #adresse-input:not(:focus)::-webkit-search-cancel-button { display: none; }
+
+    .adressesok:focus-within {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        max-width: none;
+        margin: 0;
+        padding: 0 8px;
+        background: var(--flate);
+    }
+    .adressesok:focus-within > i { left: 19px; }
+    .adressesok:focus-within #adresse-input { padding-right: 12px; cursor: text; }
+    .adressesok:focus-within .adresse-treff { left: 8px; right: 8px; top: calc(100% - 6px); }
+}
+
+/* Under dette er det ikkje plass til meir av tittelen enn «Vi…» — då er vifta åleine betre. */
+@media (max-width: 480px) {
+    .merke > div { display: none; }
 }
 
 /* ==========================================================================

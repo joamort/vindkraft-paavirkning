@@ -100,7 +100,7 @@ foreach ($rawPoints as $p) {
 // --- Rate limiting --------------------------------------------------------
 $cost    = max(1, (int) ceil(count($points) / 50));
 $limiter = new RateLimiter();
-$verdict = $limiter->check('overflate:ip:' . RateLimiter::clientIp(), RATE_LIMIT, RATE_WINDOW_SEC, $cost);
+$verdict = $limiter->checkClient('overflate', RATE_LIMIT, RATE_WINDOW_SEC, $cost);
 
 if (!$verdict['tillatt']) {
     header('Retry-After: ' . $verdict['nullstilles_om']);

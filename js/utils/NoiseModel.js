@@ -27,6 +27,7 @@
  */
 
 import { CONFIG } from '../config.js';
+import { fmtTal } from './dom.js';
 import { summerDesibel } from './geo.js';
 
 const S = CONFIG.stoy;
@@ -169,7 +170,7 @@ export function formaterStoy(ldenDb, kort = false) {
     if (ldenDb < S.rapporteringsgolvDb) {
         return kort ? `<${S.rapporteringsgolvDb}` : `under ${S.rapporteringsgolvDb} dB`;
     }
-    return kort ? `${ldenDb.toFixed(0)}` : `${ldenDb.toFixed(1)} dB`;
+    return kort ? `${ldenDb.toFixed(0)}` : `${fmtTal(ldenDb, 1)} dB`;
 }
 
 /**

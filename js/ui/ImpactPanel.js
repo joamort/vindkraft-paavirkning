@@ -10,14 +10,14 @@
  */
 
 import { CONFIG } from '../config.js';
-import { escHtml, fmtAvstand, fmtDb, fmtMoh, fmtProsent, fmtTimar, $ } from '../utils/dom.js';
+import { escHtml, fmtAvstand, fmtDb, fmtMoh, fmtProsent, fmtTal, fmtTimar, $ } from '../utils/dom.js';
 import { stoykategori, formaterStoy } from '../utils/NoiseModel.js';
 import { magnitudeTekst } from '../utils/ObstacleLights.js';
 import { MANADER, dagTilDato } from '../utils/ShadowFlicker.js';
 import { JUSTERT_KILDE } from '../utils/TurbinJustering.js';
 import { kanEndrastAvKvaOm, KVA_OM_KILDE, STORLEIK_SCENARIO } from '../utils/TurbinScenario.js';
 import { overflateSamandrag, kanEndrastAvOverflate } from '../utils/SurfaceCheck.js';
-import { ProfileChart } from './ProfileChart.js';
+import { ProfileChart, lastChartJs } from './ProfileChart.js';
 import { Toast } from './Toast.js';
 
 /** Ikon per synlegheitskategori. */
@@ -215,6 +215,9 @@ export class ImpactPanel {
                    Trykk så <strong>«Analyser her»</strong>. Appen finn då alle vindturbinar i
                    nærleiken og reknar ut kva som faktisk er synleg frå akkurat det punktet,
                    ut frå terrenget mellom.</p>
+                <p>Du kan òg <strong>søkje opp ei adresse</strong>
+                   (<i class="fa-solid fa-magnifying-glass"></i> øvst) — då startar analysen
+                   med det same.</p>
                 <!--
                   Teksten MÅ liggje i eit eige span. .tomtilstand-hint er ein
                   flex-container, så kvar <kbd> og kvar tekstbit mellom dei
@@ -339,6 +342,11 @@ export class ImpactPanel {
             ${this._samandragHtml({ punkt, samandrag, samlaStoy, avkorta, radiusM, resultat, overflateKoyrer, panoramaKoyrer })}
             ${this._listeHtml(resultat)}
         `;
+
+        // No finst det turbinar å opne: hent grafbiblioteket i bakgrunnen, så
+        // det er inne før det fyrste klikket (lastChartJs() er idempotent, og
+        // ein feil her er ikkje noko brukaren skal høyre om).
+        if (resultat.length > 0) lastChartJs().catch(() => {});
     }
 
     /**
@@ -421,7 +429,7 @@ export class ImpactPanel {
                     <dt>Mest dominerande</dt>
                     <dd>${s.mestDominerande
                         ? `${escHtml(s.mestDominerande.navn)} — ${escHtml(s.mestDominerande.dominans.tekst.toLowerCase())}
-                           (${s.mestDominerande.dominans.synsvinkelGrader.toFixed(1)}° synsvinkel)`
+                           (${fmtTal(s.mestDominerande.dominans.synsvinkelGrader, 1)}° synsvinkel)`
                         : 'Ingen synlege turbinar'}</dd>
                     ${this._horisontbelastningHtml(s.kumulativHorisont)}
                 </dl>
@@ -578,7 +586,7 @@ export class ImpactPanel {
                 </div>
                 ${o.vesentlege > 0 ? `
                     <p class="skog-forklaring">
-                        Det høgaste hinderet som vart målt står <strong>${o.stersteHinderM.toFixed(1)} m</strong>
+                        Det høgaste hinderet som vart målt står <strong>${fmtTal(o.stersteHinderM, 1)} m</strong>
                         over bakken — ${o.stersteHinderM >= K.typiskSkoghoydeM
                             ? 'på høgd med vaksen granskog'
                             : 'ein skogteig, eit einskilt tre eller eit bygg'}.
@@ -653,7 +661,7 @@ export class ImpactPanel {
                 ${!ingen && magTekst ? `
                     <p class="natt-forklaring">
                         Det sterkaste lyspunktet er <strong>${escHtml(magTekst)}</strong> sett frå punktet
-                        (tilsynelatande magnitude ${mag.toFixed(1)} ved klar natt).
+                        (tilsynelatande magnitude ${fmtTal(mag, 1)} ved klar natt).
                         Eit lyspunkt med høg kontrast mot ein mørk himmel er ofte
                         <strong>meir iaugefallande enn rotorblada er om dagen</strong> —
                         dagsynlegheita krev kontrast mot terrenget, medan lyset berre krev mørke.
@@ -901,7 +909,7 @@ export class ImpactPanel {
         }
         if (r.overflate?.endring === 'skjult') {
             flagg.push(`<i class="fa-solid fa-tree rad-skog rad-skog-skjult"
-                title="Skjult når skog/bygningar vert rekna med (${r.overflate.differanseM.toFixed(1)} m over bakken ${fmtAvstand(r.overflate.kritiskD)} unna)"></i>`);
+                title="Skjult når skog/bygningar vert rekna med (${fmtTal(r.overflate.differanseM, 1)} m over bakken ${fmtAvstand(r.overflate.kritiskD)} unna)"></i>`);
         } else if (r.overflate?.endring === 'redusert') {
             flagg.push(`<i class="fa-solid fa-tree rad-skog"
                 title="Mindre synleg med skog/bygningar: ${fmtProsent(r.overflate.synlegheit.synlegDel)} mot ${fmtProsent(r.synlegheit.synlegDel)} på bar bakke"></i>`);
@@ -982,21 +990,21 @@ export class ImpactPanel {
             <dl class="detalj-tabell">
                 <dt>Visuell dominans</dt>
                 <dd>${escHtml(r.dominans.tekst)}
-                    <span class="hint">(${r.dominans.rd.toFixed(1)} rotordiameter unna)</span></dd>
+                    <span class="hint">(${fmtTal(r.dominans.rd, 1)} rotordiameter unna)</span></dd>
 
                 <dt>Synsvinkel</dt>
                 <dd>${Number.isFinite(r.dominans.synsvinkelGrader)
-                        ? `${r.dominans.synsvinkelGrader.toFixed(2)}° av synsfeltet`
+                        ? `${fmtTal(r.dominans.synsvinkelGrader, 2)}° av synsfeltet`
                         : '<span class="hint">Ikkje rekna — terrengdata mangla</span>'}
                     ${Number.isFinite(r.dominans.synsvinkelFullGrader)
                       && r.dominans.synsvinkelFullGrader > r.dominans.synsvinkelGrader
-                        ? `<span class="hint">(${r.dominans.synsvinkelFullGrader.toFixed(2)}° utan terrengskjerming)</span>` : ''}</dd>
+                        ? `<span class="hint">(${fmtTal(r.dominans.synsvinkelFullGrader, 2)}° utan terrengskjerming)</span>` : ''}</dd>
 
                 <dt>Støyestimat</dt>
                 <dd>${r.stoy
                     ? `<span class="pille ${stoyKat.klasse}">L<sub>den</sub> ${formaterStoy(r.stoy.ldenDb)}</span>
                        <span class="hint">L<sub>pA</sub> ${fmtDb(r.stoy.lpDb)}${
-                        r.stoy.skjermingDb > 0 ? `, ${r.stoy.skjermingDb.toFixed(1)} dB terrengskjerming` : ''}</span>`
+                        r.stoy.skjermingDb > 0 ? `, ${fmtTal(r.stoy.skjermingDb, 1)} dB terrengskjerming` : ''}</span>`
                     : `<span class="hint">Ikkje rekna — over ${CONFIG.stoy.maksRelevantAvstandM / 1000} km unna</span>`}</dd>
 
                 <dt>Terreng ved turbinen</dt>
@@ -1006,7 +1014,7 @@ export class ImpactPanel {
                 <dt>Turbinmål <span class="merke ${mal.merkeKlasse}">${mal.merkeTekst}</span></dt>
                 <dd>Navhøgd ${Math.round(r.navHoydeM)} m · rotor ${Math.round(r.rotorDiameterM)} m
                     · totalhøgd ${Math.round(r.totalhoydeM)} m
-                    ${r.effektMw ? `<span class="hint">${r.effektMw} MW per turbin</span>` : ''}
+                    ${r.effektMw ? `<span class="hint">${fmtTal(r.effektMw)} MW per turbin</span>` : ''}
                     ${mal.spennTekst ? `<span class="hint">${escHtml(mal.spennTekst)}</span>` : ''}
                     ${mal.kjeldeHtml}
                     ${this._kvaOmVelgHtml(r)}</dd>
@@ -1119,7 +1127,7 @@ export class ImpactPanel {
             <div class="kvaom-boks">
                 <div class="kvaom-topp">
                     <i class="fa-solid fa-flask"></i>
-                    <strong>Kva om-scenario: ${r.effektMw} MW, ${Math.round(r.navHoydeM)}/${Math.round(r.rotorDiameterM)} m</strong>
+                    <strong>Kva om-scenario: ${fmtTal(r.effektMw)} MW, ${Math.round(r.navHoydeM)}/${Math.round(r.rotorDiameterM)} m</strong>
                 </div>
                 <p class="kvaom-tekst">
                     Alle tala under gjeld denne hypotetiske turbinstorleiken for
@@ -1145,7 +1153,7 @@ export class ImpactPanel {
         if (r.malKilde === KVA_OM_KILDE || !kanEndrastAvKvaOm(r)) return '';
 
         const opts = STORLEIK_SCENARIO
-            .map((s, i) => `<option value="${i}">${s.mw} MW · ${Math.round(s.nav)}/${Math.round(s.rotor)} m</option>`)
+            .map((s, i) => `<option value="${i}">${fmtTal(s.mw)} MW · ${Math.round(s.nav)}/${Math.round(s.rotor)} m</option>`)
             .join('');
 
         return `
@@ -1233,7 +1241,7 @@ export class ImpactPanel {
                         <strong>Ope i alle dei ${o.talPunkt ?? 1} punkta som vart sjekka.</strong>
                         Overflatemodellen ligg under terskelen på ${K.terskelM} m over bakken i kvart
                         av dei — i det avgjerande punktet ${fmtAvstand(o.kritiskD)} frå deg berre
-                        <strong>${o.differanseM.toFixed(1)} m</strong>. Altså ingen skog eller bygning
+                        <strong>${fmtTal(o.differanseM, 1)} m</strong>. Altså ingen skog eller bygning
                         som betyr noko der eit hinder ville betydd mest.
                     </div>
                 </div>`;
@@ -1272,7 +1280,7 @@ export class ImpactPanel {
                     <strong>${fmtAvstand(o.kritiskD)}</strong>
                     frå deg. Bakken der er <strong>${fmtMoh(o.dtmZ)}</strong>, men
                     <strong>overflata er ${fmtMoh(o.domZ)}</strong> —
-                    <strong>${o.differanseM.toFixed(1)} m</strong> med skog, bygning eller anna
+                    <strong>${fmtTal(o.differanseM, 1)} m</strong> med skog, bygning eller anna
                     som står på bakken.
                     ${blir
                         ? `Med det høgdepåslaget kjem heile turbinen under horisonten:
@@ -1345,7 +1353,7 @@ export class ImpactPanel {
                             · ${escHtml(l.farge)} · ${l.candela} cd om natta</span>
                         ${l.synleg === true && l.magnitudeTekst
                             ? `<span class="hint lys-mag">${escHtml(l.magnitudeTekst)}
-                                   (magnitude ${l.magnitude.toFixed(1)})</span>`
+                                   (magnitude ${fmtTal(l.magnitude, 1)})</span>`
                             : ''}
                     </span>
                     ${status}

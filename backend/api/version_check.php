@@ -15,8 +15,15 @@
  *   finst noko nytt. Dette skal aldri gi ein feil til brukaren.
  *
  * Slå av heilt: slett `version.json`.
+ *
+ * Svaret seier òg om «Oppdater no»-knappen har noko å gå til
+ * (`kan_oppdatere`). Det er same regel som refresh_turbines.php sjølv
+ * handhevar — frontend skal ikkje tilby ein knapp som svarar 403, og på ein
+ * open web-host skal varselet om gamle data ikkje visast i det heile: der er
+ * det drifta, ikkje den besøkjande, som kan gjere noko med det.
  */
 
+require_once __DIR__ . '/../services/Env.php';
 require_once __DIR__ . '/../services/Http.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -28,6 +35,7 @@ const VC_TIMEOUT      = 8;          // sekund på GitHub-kallet
 
 $appDir    = dirname(__DIR__, 2);
 $naavaerande = null;
+$kanOppdatere = Env::canRefreshOverWeb();
 
 try {
     $verFil = $appDir . '/version.json';
@@ -38,7 +46,9 @@ try {
 
     // Ingen version.json → kjeldekode-oppsett. Ikkje kontakt GitHub.
     if (!is_string($naavaerande) || $naavaerande === '') {
-        echo json_encode(['ok' => true, 'naavaerande' => null, 'nyare' => false], JSON_UNESCAPED_SLASHES);
+        echo json_encode([
+            'ok' => true, 'naavaerande' => null, 'nyare' => false, 'kan_oppdatere' => $kanOppdatere,
+        ], JSON_UNESCAPED_SLASHES);
         exit;
     }
 
@@ -89,10 +99,13 @@ try {
         'nyare'       => is_string($siste) && vc_nyare($siste, $naavaerande),
         'url'         => is_array($cache) ? ($cache['url'] ?? null) : null,
         'sjekka'      => is_array($cache) ? ($cache['sjekka'] ?? null) : null,
+        'kan_oppdatere' => $kanOppdatere,
     ], JSON_UNESCAPED_SLASHES);
 } catch (\Throwable $e) {
     // Fail-silent — dette er ein bekvemssjekk, ikkje kjernefunksjonalitet.
-    echo json_encode(['ok' => true, 'naavaerande' => $naavaerande, 'nyare' => false], JSON_UNESCAPED_SLASHES);
+    echo json_encode([
+        'ok' => true, 'naavaerande' => $naavaerande, 'nyare' => false, 'kan_oppdatere' => $kanOppdatere,
+    ], JSON_UNESCAPED_SLASHES);
 }
 
 /**

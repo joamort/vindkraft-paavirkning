@@ -3,15 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<link rel="icon" href="favicon.ico" type="image/x-icon">
+<!-- SVG-ikonet for moderne nettlesarar, .ico som reserve, eige ikon for iOS-heimskjermen. -->
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
     <title>Vindkraft-påverknad — kva ser og høyrer eg frå mitt punkt?</title>
 <meta name="description" content="Interaktivt kart som viser kva vindturbinar som faktisk er synlege frå eit sjølvvalt punkt, ut frå norske terrengdata — og eit forenkla støyestimat.">
 <meta name="color-scheme" content="light">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!--
+  Førehandsvising når ei lenke vert delt («Del punkt» i sidepanelet).
+  MEDVITE INGEN og:url: delte lenker ber punktet i ?lat=&lon=, og ein
+  kanonisk URL utan dei ville fått Facebook til å sende alle til framsida.
+  og:image må vere ein absolutt URL. Han peikar på biletet i GitHub-repoet,
+  ikkje på ein bestemt server: då verkar førehandsvisinga for kvar som
+  helst som hostar appen, og ingen installasjon er avhengig av ein annan.
+-->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nn_NO">
+<meta property="og:site_name" content="Vindkraft-påverknad">
+<meta property="og:title" content="Vindkraft-påverknad — kva ser og høyrer eg frå mitt punkt?">
+<meta property="og:description" content="Sjå kva vindturbinar som faktisk er synlege frå eit punkt du vel sjølv — ut frå norske terrengdata, med eit forenkla støyestimat.">
+<meta property="og:image" content="https://raw.githubusercontent.com/joamort/vindkraft-paavirkning/main/assets/og-bilete.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Kart med siktlinjer frå eit punkt til vindturbinane rundt, og eit sidepanel med tal for synlegheit og støy.">
+<meta name="twitter:card" content="summary_large_image">
+
+<!--
+  integrity (SRI) på alt frå CDN: versjonane er pinna, så innhaldet skal
+  aldri endre seg — gjer det det likevel, nektar nettlesaren å bruke fila.
+  Byter du versjon, må hashen bytast:
+    curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A
+-->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+      integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+      integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha384-t1nt8BQoYMLFN5p42tRAtuAAFQaCQODekUVeKKZrEnEyp4H2R0RHFz0KWpmj7i8g" crossorigin="anonymous">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -367,9 +399,15 @@
 <!-- Éin-sides rapport. Skjult på skjerm; @media print viser berre denne. -->
 <div id="utskrift"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!--
+  Chart.js står ikkje her lenger: han teiknar berre høgdeprofilen i
+  detaljvisinga, og vert lasta fyrst når det finst eit resultat å opne
+  (js/ui/ProfileChart.js). Same for Three.js og html2canvas.
+-->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
+        integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin="anonymous"></script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

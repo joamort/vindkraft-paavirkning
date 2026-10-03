@@ -7,6 +7,8 @@ cache/turbines.json
 cache/areas.json
 cache/meta.json
 cache/layouts.json
+cache/version_check.json
+cache/refresh.lock
 cache/elevation/*
 cache/ratelimit/*
 !cache/elevation/.gitkeep

@@ -24,7 +24,8 @@ import {
     haversine, krummingsfall, summerDesibel, synsvinkel, destinasjon,
     skannHorisont, skannHorisontTopK, terrengHelning,
 } from '../js/utils/geo.js';
-import { samletStoy, stoykategori, turbinStoy } from '../js/utils/NoiseModel.js';
+import { samletStoy, stoykategori, turbinStoy, formaterStoy } from '../js/utils/NoiseModel.js';
+import { fmtTal, fmtAvstand, fmtDb, fmtTimar } from '../js/utils/dom.js';
 import { hinderlysKrav, hinderlysSynlegheit, stjernemagnitude } from '../js/utils/ObstacleLights.js';
 import {
     solposisjon, norskUtcOffsetTimar, byggSoltabell, skyggekastForTurbin,
@@ -2052,6 +2053,31 @@ console.log('\n=== 17. Panoramaet sin skogbrytar ===\n');
 }
 
 // ===================================================================
+// ===================================================================
+console.log('\n=== 18. Talformat og serversvar (CLAUDE.md §32) ===\n');
+
+sjekk('fmtTal: desimalkomma', fmtTal(53.44, 1) === '53,4', fmtTal(53.44, 1));
+sjekk('fmtTal: ekte minusteikn', fmtTal(-3.24, 1) === '−3,2', fmtTal(-3.24, 1));
+sjekk('fmtTal utan desimalar: talet slik det er', fmtTal(4.2) === '4,2' && fmtTal(6) === '6');
+sjekk('fmtTal: ikkje-tal → strek', fmtTal(NaN, 1) === '–' && fmtTal(null) === '–');
+sjekk('fmtAvstand: 1,75 km / 13,0 km / 419 m',
+    fmtAvstand(1750) === '1,75 km' && fmtAvstand(13000) === '13,0 km' && fmtAvstand(419.4) === '419 m',
+    `${fmtAvstand(1750)} · ${fmtAvstand(13000)} · ${fmtAvstand(419.4)}`);
+sjekk('fmtDb / fmtTimar / formaterStoy brukar komma',
+    fmtDb(47) === '47,0 dB' && fmtTimar(2.25) === '2,3 t' && formaterStoy(53.44) === '53,4 dB' && formaterStoy(53.44, true) === '53',
+    `${fmtDb(47)} · ${fmtTimar(2.25)} · ${formaterStoy(53.44)}`);
+
+// Serveren skal svare med kortaste form på flyttal, uansett php.ini. Ein host
+// med høg serialize_precision gav «365.32999999999998408…» (§32).
+try {
+    const raw = await (await fetch(`${API}/backend/api/elevation_point.php?lat=63.84&lon=10.14`)).text();
+    const lange = raw.match(/\d\.\d{17,}/g) ?? [];
+    sjekk('elevation_point.php: ingen flyttal med 17+ desimalar', raw.includes('"ok":true') && lange.length === 0,
+        lange[0] ?? raw.slice(0, 80));
+} catch (e) {
+    sjekk('elevation_point.php svarar', false, e.message);
+}
+
 console.log(`\n${feil === 0 ? '✔ ALLE TESTAR PASSERTE' : `✘ ${feil} TEST(AR) FEILA`}\n`);
 process.exit(feil === 0 ? 0 : 1);
 

@@ -33,6 +33,14 @@ jobs:
           done
           exit $fail
 
+      # Ein host kan ha sett serialize_precision til noko anna enn -1, og då
+      # skriv json_encode() flyttal med ~50 siffer (CLAUDE.md §32). Http.php
+      # set verdien tilbake; testen køyrer difor med den verste innstillinga.
+      - name: Flyttal i JSON held seg korte uansett php.ini
+        run: |
+          ut=$(php -d serialize_precision=100 -r 'require "backend/services/Http.php"; echo json_encode([365.33, 0.1]);')
+          test "$ut" = "[365.33,0.1]" || { echo "::error::json_encode gav $ut"; exit 1; }
+
   docker:
     runs-on: ubuntu-latest
     steps:
@@ -65,7 +73,14 @@ jobs:
           curl -si http://localhost:8011/ > /tmp/root.txt
           head -1 /tmp/root.txt | grep -q '200' || { echo "::error::/ ikkje 200"; fail=1; }
           grep -qi 'content-security-policy' /tmp/root.txt || { echo "::error::manglar CSP"; fail=1; }
-          grep -qi "connect-src 'self'" /tmp/root.txt || { echo "::error::CSP connect-src feil"; fail=1; }
+          # connect-src skal vere 'self' ÅLEINE — semikolonet rett etter er poenget.
+          grep -qi "connect-src 'self';" /tmp/root.txt || { echo "::error::CSP connect-src feil"; fail=1; }
+
+          # HTML, CSS og JS skal alltid revaliderast (filnamna ber ingen versjon).
+          for f in / /css/styles.css /js/app.js; do
+            curl -sI "http://localhost:8011$f" | grep -qi '^cache-control: no-cache' \
+              || { echo "::error::$f manglar Cache-Control: no-cache"; fail=1; }
+          done
 
           check 200 /css/styles.css
           check 200 /js/app.js

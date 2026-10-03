@@ -13,6 +13,7 @@
  *   https://littavalt.no/vind/cron/fetch_turbines.php?key=...
  */
 
+require_once __DIR__ . '/../backend/services/Env.php';
 require_once __DIR__ . '/../backend/services/NveVindkraftFetcher.php';
 require_once __DIR__ . '/../backend/services/Logger.php';
 
@@ -21,7 +22,7 @@ $isCli = PHP_SAPI === 'cli';
 if (!$isCli) {
     header('Content-Type: text/plain; charset=utf-8');
 
-    $expected = trim((string) (parseEnvValue(__DIR__ . '/../.env', 'CRON_SECRET') ?? ''));
+    $expected = Env::get('CRON_SECRET');
     $provided = (string) ($_GET['key'] ?? '');
 
     // Ingen nøkkel konfigurert = web-trigging heilt av. Betre å stengje enn å
@@ -76,26 +77,4 @@ if (!$result['ok']) {
         exit(1);
     }
     http_response_code(500);
-}
-
-/**
- * Minimal .env-lesar. Prosjektet har ingen andre .env-behov, så det er ikkje
- * verdt ei eiga Config-klasse eller ei Composer-avhengigheit for dette.
- */
-function parseEnvValue(string $path, string $key): ?string
-{
-    if (!is_readable($path)) {
-        return null;
-    }
-    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#')) {
-            continue;
-        }
-        [$k, $v] = array_pad(explode('=', $line, 2), 2, '');
-        if (trim($k) === $key) {
-            return trim($v, " \t\"'");
-        }
-    }
-    return null;
 }

@@ -36,7 +36,7 @@ if ($lat === false || $lon === false
 
 $limiter = new RateLimiter();
 // EIGEN TELJAR PER ENDEPUNKT — sjå kommentaren i elevation_profile.php.
-$verdict = $limiter->check('punkt:ip:' . RateLimiter::clientIp(), RATE_LIMIT, RATE_WINDOW_SEC);
+$verdict = $limiter->checkClient('punkt', RATE_LIMIT, RATE_WINDOW_SEC);
 if (!$verdict['tillatt']) {
     http_response_code(429);
     header('Retry-After: ' . $verdict['nullstilles_om']);
