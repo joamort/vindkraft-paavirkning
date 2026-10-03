@@ -1,4 +1,4 @@
-# CONFIG-VERSION: 5 (2026-10-03)
+# CONFIG-VERSION: 6 (2026-10-03)
 # Bump talet over ved kvar endring, slik at filinnhaldet garantert skil seg frå
 # det som alt ligg på server (same konvensjon som PolitiKartet).
 #
@@ -51,7 +51,7 @@
 </FilesMatch>
 
 # Blokker sensitive filtypar (dokumentasjon, logger, backup, konfig)
-<FilesMatch "(^#.*#|\.(bak|config|dist|ini|lock|log|md|sh|sql|sw[op]|ffs_db|mjs)|~)$">
+<FilesMatch "(^#.*#|\.(bak|config|dist|ini|lock|log|md|sh|sql|sw[op]|ffs_db|ffs_lock|mjs)|~)$">
     Require all denied
 </FilesMatch>
 

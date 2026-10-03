@@ -51,7 +51,7 @@
 
 	# ---------------------------------------------------- Tilgangskontroll
 	# Speglar <FilesMatch> / RewriteRule i .htaccess.
-	@sensitiv_filtype path_regexp \.(bak|config|dist|ini|lock|log|md|sh|sql|sw[op]|ffs_db|mjs)$
+	@sensitiv_filtype path_regexp \.(bak|config|dist|ini|lock|log|md|sh|sql|sw[op]|ffs_db|ffs_lock|mjs)$
 	@punktfil path_regexp /\.[^/]
 	@internt path /logs/* /tools/*
 	# Alt under cache/ er internt PHP-arbeidsminne bortsett frå dei to filene

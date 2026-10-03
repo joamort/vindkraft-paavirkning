@@ -16,6 +16,7 @@ cache/ratelimit/*
 logs/*.log
 logs/*.log.1
 .sync.ffs_db
+*.ffs_lock
 .env
 CLAUDE.md
 PLAN.md
